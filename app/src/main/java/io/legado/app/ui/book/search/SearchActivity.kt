@@ -10,9 +10,9 @@ import android.view.MenuItem
 import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
-import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.activity.viewModels
+import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
@@ -50,7 +50,6 @@ import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.SearchBookOpenHelper
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
-import io.legado.app.ui.widget.ModernActionPopup
 import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.applyNavigationBarMargin
 import io.legado.app.utils.applyNavigationBarPadding
@@ -101,7 +100,6 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
     private var groups: List<String>? = null
     private var historyFlowJob: Job? = null
     private var booksFlowJob: Job? = null
-    private var modernMenuPopup: PopupWindow? = null
     private var isManualStopSearch = false
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -198,15 +196,13 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
     }
 
     private fun showSearchMenu(anchor: View) {
-        modernMenuPopup = ModernActionPopup.showFromMenu(
-            anchor = anchor,
-            menuRes = R.menu.book_search,
-            previousPopup = modernMenuPopup,
-            prepare = {
-                prepareSearchMenu(this)
+        PopupMenu(this, anchor).apply {
+            inflate(R.menu.book_search)
+            prepareSearchMenu(menu)
+            setOnMenuItemClickListener {
+                onCompatOptionsItemSelected(it)
             }
-        ) {
-            onCompatOptionsItemSelected(it)
+            show()
         }
     }
 

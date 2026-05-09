@@ -33,6 +33,7 @@ import io.legado.app.lib.theme.getPrimaryTextColor
 import io.legado.app.lib.theme.UiCorner
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
+import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.ui.book.read.config.ReaderSheetStyle
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.widget.ModernActionPopup
@@ -47,6 +48,8 @@ import io.legado.app.utils.dpToPx
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.gone
 import io.legado.app.utils.invisible
+import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.isDataUrl
 import io.legado.app.utils.loadAnimation
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.putPrefBoolean
@@ -701,15 +704,51 @@ class ReadMenu @JvmOverloads constructor(
     }
 
     private fun resolveChapterUrl(chapter: io.legado.app.data.entities.BookChapter): String? {
+        chapter.url.trim().takeIf { it.isOpenableWebUrl() }?.let {
+            return it
+        }
         val candidates = listOf(
-            chapter.url,
+            resolveAnalyzeUrl(chapter.url, chapter.baseUrl),
             runCatching { chapter.getAbsoluteURL() }.getOrNull(),
             chapter.baseUrl,
             ReadBook.book?.bookUrl
         )
         return candidates.asSequence()
             .mapNotNull { it?.trim() }
-            .firstOrNull { it.isNotBlank() }
+            .firstOrNull { it.isOpenableWebUrl() }
+    }
+
+    private fun String.isOpenableWebUrl(): Boolean {
+        if (!isAbsUrl()) {
+            return false
+        }
+        val host = runCatching { Uri.parse(this).host }.getOrNull() ?: return true
+        return !host.equals("localhost", ignoreCase = true)
+                && !host.equals("::1", ignoreCase = true)
+                && !host.startsWith("127.")
+    }
+
+    private fun resolveAnalyzeUrl(url: String, baseUrl: String): String? {
+        val cleanUrl = url.trim()
+        if (cleanUrl.isBlank()
+            || cleanUrl.startsWith("file://", ignoreCase = true)
+            || cleanUrl.startsWith("content://", ignoreCase = true)
+        ) {
+            return null
+        }
+        val shouldAnalyze = cleanUrl.isDataUrl()
+            || AnalyzeUrl.paramPattern.matcher(cleanUrl).find()
+            || baseUrl.isAbsUrl()
+        if (!shouldAnalyze) {
+            return null
+        }
+        return runCatching {
+            AnalyzeUrl(
+                mUrl = cleanUrl,
+                baseUrl = baseUrl,
+                source = ReadBook.bookSource
+            ).url
+        }.getOrNull()
     }
 
     fun upSeekBar() {

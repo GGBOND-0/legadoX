@@ -49,6 +49,10 @@ import java.util.Locale
 @Keep
 object ThemeConfig {
 
+    private const val DEFAULT_DAY_PRIMARY = 0xFFF1F2F6.toInt()
+    private const val DEFAULT_NIGHT_PRIMARY = 0xFF252528.toInt()
+    private const val DEFAULT_DAY_PRIMARY_HEX = "#F1F2F6"
+    private const val LEGACY_DEFAULT_DAY_PRIMARY = 0xFF795548.toInt()
     private var usableBgImageCacheKey: String? = null
     private var usableBgImageCacheValue: Boolean = false
     const val configFileName = "themeConfig.json"
@@ -56,7 +60,7 @@ object ThemeConfig {
 
     val configList: ArrayList<Config> by lazy {
         val cList = getConfigs() ?: DefaultData.themeConfigs
-        ArrayList(cList)
+        ArrayList(cList.map { migrateLegacyDefaultDayPrimary(it) })
     }
 
     private var needClearImg = true
@@ -79,8 +83,24 @@ object ThemeConfig {
     }
 
     fun applyDayNightInit(context: Context) {
+        migrateLegacyDefaultDayPrimary(context)
         applyTheme(context)
         initNightMode()
+    }
+
+    private fun migrateLegacyDefaultDayPrimary(context: Context) {
+        if (context.getPrefInt(PreferKey.cPrimary, DEFAULT_DAY_PRIMARY) == LEGACY_DEFAULT_DAY_PRIMARY) {
+            context.putPrefInt(PreferKey.cPrimary, DEFAULT_DAY_PRIMARY)
+        }
+    }
+
+    private fun migrateLegacyDefaultDayPrimary(config: Config): Config {
+        if (config.isNightTheme) return config
+        val isLegacyDefault = runCatching {
+            config.primaryColor.toColorInt() == LEGACY_DEFAULT_DAY_PRIMARY
+        }.getOrDefault(false)
+        if (!isLegacyDefault) return config
+        return config.copy(primaryColor = DEFAULT_DAY_PRIMARY_HEX)
     }
 
     private fun initNightMode() {
@@ -205,6 +225,7 @@ object ThemeConfig {
     }
 
     fun addConfig(newConfig: Config) {
+        val newConfig = migrateLegacyDefaultDayPrimary(newConfig)
         if (!validateConfig(newConfig)) {
             return
         }
@@ -223,9 +244,9 @@ object ThemeConfig {
     }
 
     fun addConfigs(newConfigs: List<Config>?) {
-        val newConfigs = newConfigs?.filter{
-            validateConfig(it)
-        }
+        val newConfigs = newConfigs
+            ?.map { migrateLegacyDefaultDayPrimary(it) }
+            ?.filter { validateConfig(it) }
         if (newConfigs.isNullOrEmpty()) {
             return
         }
@@ -405,7 +426,7 @@ object ThemeConfig {
 
     private fun getDayTheme(context: Context, name: String): Config {
         val primary =
-            context.getPrefInt(PreferKey.cPrimary, context.getCompatColor(R.color.md_brown_500))
+            context.getPrefInt(PreferKey.cPrimary, DEFAULT_DAY_PRIMARY)
         val accent =
             context.getPrefInt(PreferKey.cAccent, context.getCompatColor(R.color.md_red_600))
         val background =
@@ -454,7 +475,7 @@ object ThemeConfig {
         val primary =
             context.getPrefInt(
                 PreferKey.cNPrimary,
-                context.getCompatColor(R.color.md_blue_grey_600)
+                DEFAULT_NIGHT_PRIMARY
             )
         val accent =
             context.getPrefInt(
@@ -563,7 +584,7 @@ object ThemeConfig {
 
             AppConfig.isNightTheme -> {
                 val primary =
-                    getPrefInt(PreferKey.cNPrimary, getCompatColor(R.color.md_blue_grey_600))
+                    getPrefInt(PreferKey.cNPrimary, DEFAULT_NIGHT_PRIMARY)
                 val accent =
                     getPrefInt(PreferKey.cNAccent, getCompatColor(R.color.md_deep_orange_800))
                 val background =
@@ -583,7 +604,7 @@ object ThemeConfig {
 
             else -> {
                 val primary =
-                    getPrefInt(PreferKey.cPrimary, getCompatColor(R.color.md_brown_500))
+                    getPrefInt(PreferKey.cPrimary, DEFAULT_DAY_PRIMARY)
                 val accent =
                     getPrefInt(PreferKey.cAccent, getCompatColor(R.color.md_red_600))
                 val background =

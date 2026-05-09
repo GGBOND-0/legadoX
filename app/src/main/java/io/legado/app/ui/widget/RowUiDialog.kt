@@ -15,6 +15,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.rule.RowUi
 import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.lib.theme.applyUiTitleTypeface
+import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.utils.dpToPx
 
@@ -56,7 +57,7 @@ object RowUiDialog {
             textSize = 18f
             gravity = Gravity.CENTER_VERTICAL
             setPadding(16.dpToPx(), 0, 16.dpToPx(), 0)
-            setBackgroundResource(R.color.background_menu)
+            setBackgroundColor(context.primaryColor)
         }
         root.addView(
             titleView,

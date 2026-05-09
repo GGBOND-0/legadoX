@@ -630,7 +630,7 @@ class AudioPlayService : BaseService(),
         }
         val builder = NotificationCompat
             .Builder(this@AudioPlayService, AppConst.channelIdReadAloud)
-            .setSmallIcon(R.drawable.ic_volume_up)
+            .setSmallIcon(R.drawable.ic_status_bar_r)
             .setSubText(getString(R.string.audio))
             .setOngoing(true)
             .setOnlyAlertOnce(true)

@@ -196,7 +196,7 @@ class WebService : BaseService() {
     override fun startForegroundNotification() {
         val builder = NotificationCompat.Builder(this, AppConst.channelIdWeb)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setSmallIcon(R.drawable.ic_web_service_noti)
+            .setSmallIcon(R.drawable.ic_status_bar_r)
             .setOngoing(true)
             .setContentTitle(getString(R.string.web_service))
             .setContentText(notificationList.joinToString("\n"))

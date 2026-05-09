@@ -401,7 +401,7 @@ object AudioCacheTaskManager {
         val progressMax = state.totalChapters.coerceAtLeast(1)
         val progress = state.completedChapters.coerceIn(0, progressMax)
         val builder = NotificationCompat.Builder(appCtx, AppConst.channelIdDownload)
-            .setSmallIcon(R.drawable.ic_download)
+            .setSmallIcon(R.drawable.ic_status_bar_r)
             .setContentTitle(appCtx.getString(R.string.offline_cache))
             .setContentText("${state.bookName} · ${state.message}")
             .setOngoing(state.active)

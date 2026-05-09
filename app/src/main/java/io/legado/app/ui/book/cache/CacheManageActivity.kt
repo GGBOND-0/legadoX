@@ -19,6 +19,7 @@ import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.theme.UiCorner
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.primaryTextColor
+import io.legado.app.utils.applyNavigationBarMargin
 import io.legado.app.utils.gone
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivityForBook
@@ -73,6 +74,7 @@ class CacheManageActivity :
         btnManga.setOnClickListener { switchMode(CacheManageMode.MANGA) }
         btnUploadAll.setOnClickListener { uploadAll() }
         btnDeleteAll.setOnClickListener { deleteAll() }
+        batchBar.applyNavigationBarMargin(withInitialMargin = true)
         updateTabs(CacheManageMode.BOOK)
     }
 

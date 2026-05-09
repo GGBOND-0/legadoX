@@ -25,6 +25,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import io.legado.app.R
+import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.lib.theme.applyUiToolbarTypeface
 import io.legado.app.ui.widget.TitleBar
@@ -84,7 +85,7 @@ internal fun DialogFragment.applyRowUiDialogTitleStyle(fragmentManager: Fragment
 }
 
 private fun View.applyRowUiDialogTitleStyle() {
-    val titleBackground = context.getCompatColor(R.color.background_menu)
+    val titleBackground = context.primaryColor
     val titleContent = context.primaryTextColor
     findViews(TitleBar::class.java).forEach {
         it.setBackgroundColor(titleBackground)

@@ -3,6 +3,7 @@ package io.legado.app.help.config
 import android.content.Context
 import android.net.Uri
 import androidx.annotation.Keep
+import androidx.core.graphics.toColorInt
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.constant.PreferKey
 import io.legado.app.help.AppWebDav
@@ -27,6 +28,8 @@ object ThemePackageManager {
     private const val bookInfoBackgroundPrefix = "book_info_background"
     private const val uiFontPrefix = "ui_font"
     private const val titleFontPrefix = "title_font"
+    private const val defaultDayPrimary = "#F1F2F6"
+    private const val legacyDefaultDayPrimary = 0xFF795548.toInt()
 
     val rootDir: File
         get() = appCtx.externalFiles.getFile("themePackages")
@@ -436,7 +439,7 @@ object ThemePackageManager {
         val config = pkg.config ?: ThemeConfig.Config(
             themeName = pkg.name,
             isNightTheme = pkg.isNightTheme,
-            primaryColor = "#795548",
+            primaryColor = if (pkg.isNightTheme) "#252528" else defaultDayPrimary,
             accentColor = "#E53935",
             backgroundColor = if (pkg.isNightTheme) "#212121" else "#F5F5F5",
             bottomBackground = if (pkg.isNightTheme) "#303030" else "#EEEEEE",
@@ -444,7 +447,7 @@ object ThemePackageManager {
             backgroundImgPath = null,
             backgroundImgBlur = 0
         )
-        return config.copy(
+        return normalizeLegacyDefaultDayPrimary(config).copy(
             themeName = pkg.name,
             isNightTheme = pkg.isNightTheme,
             backgroundImgPath = resolvePath(config.backgroundImgPath, dir),
@@ -452,6 +455,15 @@ object ThemePackageManager {
             uiFontPath = resolvePath(config.uiFontPath, dir),
             titleFontPath = resolvePath(config.titleFontPath, dir)
         )
+    }
+
+    private fun normalizeLegacyDefaultDayPrimary(config: ThemeConfig.Config): ThemeConfig.Config {
+        if (config.isNightTheme) return config
+        val isLegacyDefault = runCatching {
+            config.primaryColor.toColorInt() == legacyDefaultDayPrimary
+        }.getOrDefault(false)
+        if (!isLegacyDefault) return config
+        return config.copy(primaryColor = defaultDayPrimary)
     }
 
     private fun resolvePath(path: String?, dir: File): String? {

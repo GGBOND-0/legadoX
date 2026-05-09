@@ -697,7 +697,7 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
         val name = getString(if (isNightTheme) R.string.theme_night else R.string.theme_day)
         val primary = getPrefInt(
             if (isNightTheme) PreferKey.cNPrimary else PreferKey.cPrimary,
-            getCompatColor(if (isNightTheme) R.color.md_blue_grey_600 else R.color.md_brown_500)
+            if (isNightTheme) DEFAULT_NIGHT_PRIMARY else DEFAULT_DAY_PRIMARY
         )
         val accent = getPrefInt(
             if (isNightTheme) PreferKey.cNAccent else PreferKey.cAccent,
@@ -1234,6 +1234,8 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
         private val themeRemoteSyncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         private const val EDIT_DIALOG_WIDTH_RATIO = 0.94f
         private const val EDIT_DIALOG_HEIGHT_RATIO = 0.82f
+        private const val DEFAULT_DAY_PRIMARY = 0xFFF1F2F6.toInt()
+        private const val DEFAULT_NIGHT_PRIMARY = 0xFF252528.toInt()
         private const val requestMainBackground = 301
         private const val requestBookInfoBackground = 302
         private const val colorPrimary = 401

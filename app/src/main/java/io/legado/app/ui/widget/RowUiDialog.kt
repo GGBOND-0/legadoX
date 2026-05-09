@@ -13,6 +13,8 @@ import com.google.android.flexbox.FlexboxLayout
 import com.google.android.flexbox.FlexWrap
 import io.legado.app.R
 import io.legado.app.data.entities.rule.RowUi
+import io.legado.app.lib.theme.applyUiBodyTypeface
+import io.legado.app.lib.theme.applyUiTitleTypeface
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.utils.dpToPx
 
@@ -40,6 +42,7 @@ object RowUiDialog {
         val content = FlexboxLayout(context).apply {
             flexWrap = FlexWrap.WRAP
             setPadding(12.dpToPx(), 10.dpToPx(), 12.dpToPx(), 12.dpToPx())
+            applyUiBodyTypeface(context)
         }
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -48,6 +51,7 @@ object RowUiDialog {
         }
         val titleView = TextView(context).apply {
             text = config.title
+            applyUiTitleTypeface(context)
             setTextColor(context.primaryTextColor)
             textSize = 18f
             gravity = Gravity.CENTER_VERTICAL
@@ -93,6 +97,7 @@ object RowUiDialog {
         val dialogView = FrameLayout(context).apply {
             setPadding(16.dpToPx(), 16.dpToPx(), 16.dpToPx(), 16.dpToPx())
             addView(root)
+            applyUiBodyTypeface(context)
         }
         dialog = AlertDialog.Builder(context)
             .setView(dialogView)

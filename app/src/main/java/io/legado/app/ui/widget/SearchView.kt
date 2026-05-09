@@ -32,6 +32,7 @@ class SearchView @JvmOverloads constructor(
 ) : SearchView(context, attrs) {
     private var mSearchHintIcon: Drawable? = null
     private var textView: TextView? = null
+    private var styleApplied = false
 
     @SuppressLint("UseCompatLoadingForDrawables")
     override fun onLayout(
@@ -42,6 +43,18 @@ class SearchView @JvmOverloads constructor(
         bottom: Int
     ) {
         super.onLayout(changed, left, top, right, bottom)
+        if (!styleApplied) {
+            post(::applySearchStyle)
+        }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        post(::applySearchStyle)
+    }
+
+    @SuppressLint("UseCompatLoadingForDrawables")
+    private fun applySearchStyle() {
         try {
             if (textView == null) {
                 textView = findViewById(androidx.appcompat.R.id.search_src_text)
@@ -58,6 +71,7 @@ class SearchView @JvmOverloads constructor(
             ensureTransparentSurfaces()
             updateSearchBackground()
             updateQueryHint()
+            styleApplied = true
         } catch (e: Exception) {
             e.printOnDebug()
         }

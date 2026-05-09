@@ -62,8 +62,10 @@ import io.legado.app.help.storage.Backup
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.UiCorner
+import io.legado.app.lib.theme.applyUiTitleTypeface
 import io.legado.app.lib.theme.bottomBackground
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.lib.theme.uiTypeface
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.about.CrashLogsDialog
 import io.legado.app.ui.about.ReadRecordWidgetStore
@@ -139,6 +141,7 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
     private var sideNavigationBackgroundLoadingKey: String? = null
     private var sideNavigationBackgroundKey: String? = null
     private var sideNavigationBackgroundBitmap: Bitmap? = null
+    private var bottomNavigationConfigSignature: String? = null
     private val sidebarTouchSlop by lazy {
         ViewConfiguration.get(this).scaledTouchSlop
     }
@@ -281,7 +284,9 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
     override fun onResume() {
         super.onResume()
         refreshBottomNavigationConfig()
-        updateSideGoalHeader()
+        if (isSidebarMode()) {
+            updateSideGoalHeader()
+        }
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
@@ -427,6 +432,11 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
     }
 
     private fun refreshBottomNavigationConfig() {
+        val signature = NavigationBarIconConfig.currentSignature(AppConfig.isNightTheme)
+        if (bottomNavigationConfigSignature == signature) {
+            return
+        }
+        bottomNavigationConfigSignature = signature
         NavigationBarIconConfig.applyCurrentBottomConfig(AppConfig.isNightTheme)
         applyBottomNavigationIcons()
         applyBottomLayoutMode()
@@ -629,7 +639,10 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
             button.contentDescription = title
             button.setImageDrawable(menuItem?.icon?.constantState?.newDrawable()?.mutate() ?: menuItem?.icon)
             button.imageTintList = null
-            sideNavigationTextMap()[itemId]?.text = title
+            sideNavigationTextMap()[itemId]?.let {
+                it.text = title
+                it.applyUiTitleTypeface(this@MainActivity)
+            }
             sideNavigationRowMap()[itemId]?.background = createSideNavigationRowDrawable(itemId == selectedItemId)
         }
         sideNavBookshelfGroups.isVisible = sideBookshelfGroupsExpanded &&
@@ -639,6 +652,7 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         sideNavAi.imageTintList = bottomNavigationView.createThemeColorStateList()
         sideNavAi.contentDescription = getString(R.string.side_nav_assistant)
         sideNavAiText.text = getString(R.string.side_nav_assistant)
+        sideNavAiText.applyUiTitleTypeface(this@MainActivity)
     }
 
     private fun sideNavigationTitle(itemId: Int, fallback: CharSequence?): CharSequence {
@@ -666,6 +680,7 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         return TextView(this).apply {
             text = group.groupName
             textSize = 15f
+            applyUiTitleTypeface(this@MainActivity)
             setTextColor(
                 if (selected) {
                     ContextCompat.getColor(this@MainActivity, R.color.primaryText)
@@ -861,6 +876,8 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
             binding.sideGoalUserName.text = goalConfig.userName?.takeIf { it.isNotBlank() }
                 ?: getString(R.string.read_record_goal_card)
             binding.sideGoalToday.text = getString(R.string.read_record_goal_today, todayText)
+            binding.sideGoalUserName.applyUiTitleTypeface(this@MainActivity)
+            binding.sideGoalToday.typeface = this@MainActivity.uiTypeface()
         }
     }
 

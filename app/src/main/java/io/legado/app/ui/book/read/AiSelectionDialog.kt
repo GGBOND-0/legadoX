@@ -13,6 +13,7 @@ import io.legado.app.databinding.DialogDictBinding
 import io.legado.app.help.ai.AiChatService
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.accentColor
+import io.legado.app.lib.theme.applyUiTabTypeface
 import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.ui.main.ai.AiChatMessage
 import io.legado.app.utils.setLayout
@@ -61,6 +62,7 @@ class AiSelectionDialog() : BaseDialogFragment(R.layout.dialog_dict) {
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addTab(binding.tabLayout.newTab().setText(R.string.ai_reply))
+        binding.tabLayout.applyUiTabTypeface(requireContext())
         binding.tvDict.movementMethod = LinkMovementMethod()
         binding.tvDict.text = getString(R.string.dynamic_loading)
         binding.rotateLoading.visible()

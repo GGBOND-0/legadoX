@@ -24,8 +24,11 @@ class BooksAdapterList(context: Context, callBack: CallBack) :
         return when (viewType) {
             1 -> GroupViewHolder(ItemBookshelfListGroupBinding.inflate(inflater, parent, false))
             else -> {
-                if (AppConfig.bookshelfLayout == 0) { BookViewHolder(ItemBookshelfListBinding.inflate(inflater, parent, false)) }
-                else { BookViewHolder2(ItemBookshelfList2Binding.inflate(inflater, parent, false)) }
+                if (AppConfig.bookshelfLayout == 0) {
+                    BookViewHolder(ItemBookshelfListBinding.inflate(inflater, parent, false))
+                } else {
+                    BookViewHolder2(ItemBookshelfList2Binding.inflate(inflater, parent, false))
+                }
             }
 
         }

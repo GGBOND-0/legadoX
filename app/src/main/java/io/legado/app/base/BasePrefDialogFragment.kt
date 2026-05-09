@@ -9,8 +9,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import io.legado.app.R
 import io.legado.app.help.config.AppConfig
-import io.legado.app.lib.theme.applyUiBodyTypefaceDeep
-import io.legado.app.lib.theme.uiTypeface
+import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.lib.theme.dialogSurfaceBackground
 import io.legado.app.utils.dpToPx
 
@@ -56,7 +55,7 @@ abstract class BasePrefDialogFragment(
             view.background = requireContext().dialogSurfaceBackground
         }
         if (!AppConfig.isEInkMode) {
-            view.applyUiBodyTypefaceDeep(requireContext().uiTypeface())
+            view.applyUiBodyTypeface(requireContext())
         }
     }
 }

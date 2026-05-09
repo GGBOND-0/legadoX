@@ -8,6 +8,7 @@ import androidx.preference.PreferenceViewHolder
 import io.legado.app.R
 import io.legado.app.lib.theme.bottomBackground
 import io.legado.app.lib.theme.getPrimaryTextColor
+import io.legado.app.lib.theme.uiTypeface
 import io.legado.app.utils.ColorUtils
 
 
@@ -29,6 +30,7 @@ class NameListPreference(context: Context, attrs: AttributeSet) : ListPreference
             R.id.text_view, isBottomBackground = isBottomBackground
         )
         if (v is TextView) {
+            v.typeface = context.uiTypeface()
             v.text = entry
             if (isBottomBackground) {
                 val bgColor = context.bottomBackground

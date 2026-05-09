@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment
 import io.legado.app.R
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfig
+import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.ui.widget.TitleBar
 import io.legado.app.utils.applyTint
 
@@ -31,6 +32,7 @@ abstract class BaseFragment(@LayoutRes layoutID: Int) : Fragment(layoutID) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         applyRootBackgroundPolicy(view)
+        view.applyUiBodyTypeface(requireContext())
         onMultiWindowModeChanged()
         observeLiveBus()
         onFragmentCreated(view, savedInstanceState)

@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.withTimeoutOrNullAsync
 import kotlinx.coroutines.ensureActive
@@ -386,7 +387,9 @@ abstract class RecyclerAdapter<ITEM, VB : ViewBinding>(protected val context: Co
         }
 
         else -> {
-            ItemViewHolder(getViewBinding(parent))
+            ItemViewHolder(getViewBinding(parent).apply {
+                applyUiBodyTypeface(context)
+            })
         }
     }
 

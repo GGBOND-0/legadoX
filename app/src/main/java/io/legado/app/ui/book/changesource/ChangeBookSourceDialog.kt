@@ -28,6 +28,7 @@ import io.legado.app.databinding.DialogBookChangeSourceBinding
 import io.legado.app.help.book.isWebFile
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.lib.theme.applyUiSearchTypeface
 import io.legado.app.lib.theme.elevation
 import io.legado.app.lib.theme.getPrimaryTextColor
 import io.legado.app.lib.theme.primaryColor
@@ -162,6 +163,7 @@ class ChangeBookSourceDialog() : BaseDialogFragment(R.layout.dialog_book_change_
 
     private fun initSearchView() {
         val searchView = binding.toolBar.menu.findItem(R.id.menu_screen).actionView as SearchView
+        searchView.applyUiSearchTypeface(requireContext())
         searchView.setOnCloseListener {
             showTitle()
             false

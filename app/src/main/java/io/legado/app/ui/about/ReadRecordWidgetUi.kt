@@ -19,6 +19,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.databinding.ItemReadRecordCoverBinding
 import io.legado.app.databinding.ItemReadRecordRankBinding
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.lib.dialogs.setUiTitle
 import io.legado.app.lib.theme.UiCorner
 import io.legado.app.lib.theme.applyUiInputStyle
 import io.legado.app.lib.theme.applyUiSectionTitleStyle
@@ -330,7 +331,7 @@ fun Context.showReadRecordGoalDialog(
     })
     container.addView(goalInput)
     AlertDialog.Builder(this)
-        .setTitle(R.string.read_record_goal_card)
+        .setUiTitle(this, R.string.read_record_goal_card)
         .setView(container)
         .setPositiveButton(android.R.string.ok) { _, _ ->
             val minutes = goalInput.text?.toString()?.trim()?.toIntOrNull()?.coerceAtLeast(1) ?: 120

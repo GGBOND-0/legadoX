@@ -9,6 +9,8 @@ import android.widget.TextView
 import androidx.preference.Preference
 import androidx.preference.PreferenceViewHolder
 import io.legado.app.R
+import io.legado.app.lib.theme.applyUiTitleTypeface
+import io.legado.app.lib.theme.uiTypeface
 import io.legado.app.utils.progressAdd
 
 class SeekBarPreference(context: Context, attrs: AttributeSet) : Preference(context, attrs) {
@@ -43,8 +45,16 @@ class SeekBarPreference(context: Context, attrs: AttributeSet) : Preference(cont
         mValueText = holder.findViewById(R.id.tv_seek_value) as? TextView
         seekPlus = holder.findViewById(R.id.iv_seek_plus) as? ImageView
         seekReduce = holder.findViewById(R.id.iv_seek_reduce) as? ImageView
-        (holder.findViewById(R.id.preference_title) as? TextView)?.text = title
-        (holder.findViewById(R.id.preference_desc) as? TextView)?.text = summary
+        io.legado.app.lib.prefs.Preference.applyTypeface(context, holder)
+        (holder.findViewById(R.id.preference_title) as? TextView)?.run {
+            text = title
+            applyUiTitleTypeface(context)
+        }
+        (holder.findViewById(R.id.preference_desc) as? TextView)?.run {
+            text = summary
+            typeface = context.uiTypeface()
+        }
+        mValueText?.typeface = context.uiTypeface()
         mSeekBar?.apply {
             max = mMaxValue - mMinValue
             progress = value - mMinValue

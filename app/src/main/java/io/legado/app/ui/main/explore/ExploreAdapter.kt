@@ -37,7 +37,9 @@ import io.legado.app.databinding.ItemFilletCompleteTextBinding
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
+import io.legado.app.lib.theme.applyUiBodyTypefaceDeep
 import io.legado.app.lib.theme.accentColor
+import io.legado.app.lib.theme.uiTypeface
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.widget.ModernActionPopup
@@ -531,28 +533,34 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
 
     @Synchronized
     private fun getFlexboxChild(flexbox: FlexboxLayout): TextView {
-        return if (recycler.isEmpty()) {
+        return (if (recycler.isEmpty()) {
             ItemFilletTextBinding.inflate(inflater, flexbox, false).root
         } else {
             recycler.removeLastElement()
+        }).apply {
+            typeface = context.uiTypeface()
         }
     }
 
     @Synchronized
     private fun getFlexboxChildText(flexbox: FlexboxLayout): AutoCompleteTextView {
-        return if (textRecycler.isEmpty()) {
+        return (if (textRecycler.isEmpty()) {
             ItemFilletCompleteTextBinding.inflate(inflater, flexbox, false).root
         } else {
             textRecycler.removeLastElement()
+        }).apply {
+            typeface = context.uiTypeface()
         }
     }
 
     @Synchronized
     private fun getFlexboxChildSelect(flexbox: FlexboxLayout): LinearLayout {
-        return if (selectRecycler.isEmpty()) {
+        return (if (selectRecycler.isEmpty()) {
             ItemFilletSelectorSingleBinding.inflate(inflater, flexbox, false).root
         } else {
             selectRecycler.removeLastElement()
+        }).apply {
+            applyUiBodyTypefaceDeep(context.uiTypeface())
         }
     }
 

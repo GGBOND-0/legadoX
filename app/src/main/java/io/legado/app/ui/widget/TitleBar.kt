@@ -11,7 +11,6 @@ import android.util.AttributeSet
 import android.view.Menu
 import android.view.View
 import android.widget.ImageView
-import android.widget.TextView
 import androidx.annotation.ColorInt
 import androidx.annotation.StyleRes
 import androidx.appcompat.widget.Toolbar
@@ -23,7 +22,7 @@ import io.legado.app.R
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.elevation
 import io.legado.app.lib.theme.primaryColor
-import io.legado.app.lib.theme.titleTypeface
+import io.legado.app.lib.theme.applyUiToolbarTypeface
 import io.legado.app.lib.theme.transparentNavBar
 import io.legado.app.utils.activity
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
@@ -222,10 +221,7 @@ class TitleBar @JvmOverloads constructor(
 
     private fun applyTitleTypeface() {
         if (isInEditMode) return
-        val typeface = context.titleTypeface()
-        toolbar.children.filterIsInstance<TextView>().forEach {
-            it.typeface = typeface
-        }
+        toolbar.applyUiToolbarTypeface(context)
     }
 
     fun setTitleTextColor(@ColorInt color: Int) {

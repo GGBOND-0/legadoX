@@ -14,6 +14,7 @@ import androidx.preference.PreferenceViewHolder
 import io.legado.app.R
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.applyUiTitleTypeface
+import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.lib.theme.bottomBackground
 import io.legado.app.lib.theme.getPrimaryTextColor
 import io.legado.app.lib.theme.getSecondaryTextColor
@@ -36,6 +37,11 @@ open class Preference(context: Context, attrs: AttributeSet) :
     }
 
     companion object {
+
+        fun applyTypeface(context: Context, viewHolder: PreferenceViewHolder?) {
+            if (viewHolder?.itemView?.isInEditMode != false) return
+            viewHolder.itemView.applyUiBodyTypeface(context)
+        }
 
         fun <T : View> bindView(
             context: Context,
@@ -61,6 +67,7 @@ open class Preference(context: Context, attrs: AttributeSet) :
                 tvSummary.isGone = summary.isNullOrEmpty()
             }
             if (!viewHolder.itemView.isInEditMode) {
+                applyTypeface(context, viewHolder)
                 tvTitle?.applyUiTitleTypeface(context)
                 tvSummary?.typeface = context.uiTypeface()
             }

@@ -662,7 +662,6 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         kinds: List<ExploreKind>
     ): List<DiscoverTagItem> {
         val blocked = blockedButtonActions[source.bookSourceUrl]
-        val ignoredRows = discoverRowsWithInput(kinds)
         var currentGroup: String? = null
         val result = mutableListOf<DiscoverTagItem>()
         kinds.forEach { kind ->
@@ -683,7 +682,7 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
                     isButton = false,
                     group = currentGroup
                 )
-                return@forEachIndexed
+                return@forEach
             }
 
             if (isSelect) {
@@ -693,11 +692,11 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
                     isButton = false,
                     group = currentGroup
                 )
-                return@forEachIndexed
+                return@forEach
             }
 
             if (!action.isNullOrBlank()) {
-                if (blocked?.contains(action) == true) return@forEachIndexed
+                if (blocked?.contains(action) == true) return@forEach
                 result += DiscoverTagItem(
                     kind = kind.copy(type = ExploreKind.Type.button),
                     text = resolveDiscoverTagText(kind),
@@ -715,66 +714,13 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         return normalized.distinctBy { "${it.group}|${it.kind.type}|${it.kind.title}|${it.kind.url}|${it.kind.action}" }
     }
 
-    private fun discoverRowsWithInput(kinds: List<ExploreKind>): Set<Int> {
-        val ignored = mutableSetOf<Int>()
-        var rowStart = 0
-        var rowWidth = 0f
-        var rowHasInput = false
-        kinds.forEachIndexed { index, kind ->
-            if (kind.style().layout_wrapBefore && index > rowStart) {
-                if (rowHasInput) {
-                    for (i in rowStart until index) ignored += i
-                }
-                rowStart = index
-                rowWidth = 0f
-                rowHasInput = false
-            }
-            rowHasInput = rowHasInput || isDiscoverInputKind(kind)
-            rowWidth += discoverKindWidth(kind)
-            if (rowWidth >= 0.98f) {
-                if (rowHasInput) {
-                    for (i in rowStart..index) ignored += i
-                }
-                rowStart = index + 1
-                rowWidth = 0f
-                rowHasInput = false
-            }
-        }
-        if (rowHasInput && rowStart < kinds.size) {
-            for (i in rowStart until kinds.size) ignored += i
-        }
-        return ignored
-    }
-
-    private fun discoverKindWidth(kind: ExploreKind): Float {
-        val width = kind.style().layout_flexBasisPercent
-        return when {
-            width > 0f -> width
-            width >= 0.95f -> 1f
-            else -> 1f
-        }
-    }
-
     private fun isDiscoverMajorGroupKind(kind: ExploreKind): Boolean {
         if (!kind.action.isNullOrBlank() || !kind.url.isNullOrBlank()) return false
         if (kind.type == ExploreKind.Type.button || kind.type == ExploreKind.Type.select) return false
         val style = kind.style()
-        val isFullWidth = style.layout_flexBasisPercent >= 0.95f ||
-            (style.layout_flexGrow >= 1f && style.layout_flexBasisPercent < 0f)
-        if (!isFullWidth) return false
-        if (kind.type == ExploreKind.Type.toggle) return true
-        return kind.action.isNullOrBlank()
-    }
-
-    private fun isDiscoverSelectGroupKind(kind: ExploreKind): Boolean {
-        if (kind.type != ExploreKind.Type.select) return false
-        if (!kind.url.isNullOrBlank()) return false
-        val style = kind.style()
-        return style.layout_flexBasisPercent >= 0.95f
-    }
-
-    private fun isDiscoverInputKind(kind: ExploreKind): Boolean {
-        return kind.type == ExploreKind.Type.text || kind.type == "password"
+        if (style.layout_flexBasisPercent >= 0.95f) return true
+        if (style.layout_flexGrow >= 1f && style.layout_flexBasisPercent < 0f) return true
+        return false
     }
 
     private fun resolveDiscoverGroupTitle(kind: ExploreKind): String {
@@ -800,25 +746,14 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     }
 
     private fun applyDiscoverTagFilterAndSelect(preferredUrl: String?) {
-        val hasGroupedItems = discoverAllTagItems.any { !it.group.isNullOrBlank() }
         val groupList = discoverAllTagItems
             .mapNotNull { it.group?.takeIf { name -> name.isNotBlank() } }
-            .filter { group ->
-                discoverAllTagItems.any { it.group == group && isDiscoverVisibleGroupItem(it) }
-            }
             .distinct()
         discoverMajorGroups.clear()
         discoverMajorGroups.addAll(groupList)
 
         if (discoverMajorGroups.isEmpty()) {
             selectedDiscoverMajorGroup = null
-            if (hasGroupedItems) {
-                renderDiscoverSelects(emptyList())
-                renderDiscoverTags(emptyList(), -1)
-                clearDiscoverBooksToEmpty(getString(R.string.explore_empty))
-                updateDiscoverTagFilterButtonState()
-                return
-            }
         } else {
             if (selectedDiscoverMajorGroup !in discoverMajorGroups) {
                 selectedDiscoverMajorGroup = discoverMajorGroups.first()
@@ -850,10 +785,6 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         } else {
             clearDiscoverBooksToEmpty(getString(R.string.explore_empty))
         }
-    }
-
-    private fun isDiscoverVisibleGroupItem(item: DiscoverTagItem): Boolean {
-        return item.isButton || !item.kind.url.isNullOrBlank()
     }
 
     private fun updateDiscoverTagFilterButtonState() {
@@ -945,14 +876,6 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     private fun renderDiscoverTags(items: List<DiscoverTagItem>, selectedIndex: Int) {
         discoverTagItems.clear()
         discoverTagItems.addAll(items)
-        if (items.isEmpty()) {
-            binding.rvDiscoverTags.gone()
-            selectedDiscoverTagIndex = -1
-            selectedDiscoverUrlIndex = -1
-            binding.rvDiscoverTags.submitItems(emptyList(), -1)
-            return
-        }
-        binding.rvDiscoverTags.visible()
         selectedDiscoverTagIndex = selectedIndex.coerceIn(-1, items.lastIndex)
         selectedDiscoverUrlIndex = if (selectedDiscoverTagIndex in items.indices && !items[selectedDiscoverTagIndex].isButton) {
             selectedDiscoverTagIndex

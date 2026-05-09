@@ -28,6 +28,7 @@ import io.legado.app.databinding.DialogChapterChangeSourceBinding
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.lib.theme.applyUiSearchTypeface
 import io.legado.app.lib.theme.elevation
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.book.read.ReadBookActivity
@@ -181,6 +182,7 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
 
     private fun initSearchView() {
         val searchView = binding.toolBar.menu.findItem(R.id.menu_screen).actionView as SearchView
+        searchView.applyUiSearchTypeface(requireContext())
         searchView.setOnCloseListener {
             showTitle()
             false

@@ -37,12 +37,15 @@ import io.legado.app.databinding.ActivityBookSearchBinding
 import io.legado.app.help.book.isVideo
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.theme.Selector
 import io.legado.app.lib.theme.UiCorner
 import io.legado.app.lib.theme.accentColor
+import io.legado.app.lib.theme.applyUiSearchTypeface
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.lib.theme.secondaryTextColor
+import io.legado.app.lib.theme.uiTypeface
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.SearchBookOpenHelper
 import io.legado.app.ui.book.info.BookInfoActivity
@@ -247,8 +250,10 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
 
     private fun initSearchView() {
         searchView.applyTint(primaryTextColor)
+        searchView.applyUiSearchTypeface(this)
         searchView.findViewById<TextView>(androidx.appcompat.R.id.search_src_text)
             ?.apply {
+                typeface = uiTypeface()
                 setBackgroundColor(Color.TRANSPARENT)
                 setTextColor(primaryTextColor)
                 setHintTextColor(secondaryTextColor)
@@ -558,6 +563,46 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
     /**
      * 是否已经加入书架
      */
+    override fun showBookSourceSelector(book: SearchBook) {
+        val originBookUrls = book.originBookUrls()
+        if (originBookUrls.size <= 1) {
+            showBookInfo(book)
+            return
+        }
+        lifecycleScope.launch {
+            val sourceBooks = withContext(IO) {
+                val cachedBooks = appDb.searchBookDao
+                    .getByBookUrls(originBookUrls)
+                (cachedBooks + book)
+                    .distinctBy { it.originBookUrl() }
+                    .sortedBy {
+                        originBookUrls.indexOf(it.bookUrl).let { index ->
+                            if (index >= 0) index else Int.MAX_VALUE
+                        }
+                    }
+            }
+            if (sourceBooks.size <= 1) {
+                showBookInfo(sourceBooks.firstOrNull() ?: book)
+                return@launch
+            }
+            val hasSameOrigin = sourceBooks.groupingBy { it.origin }.eachCount().any { it.value > 1 }
+            val sourceNames = sourceBooks.map { sourceBook ->
+                buildString {
+                    append(sourceBook.originName.ifBlank { sourceBook.origin })
+                    if (hasSameOrigin) {
+                        val desc = sourceBook.latestChapterTitle?.takeIf { it.isNotBlank() }
+                            ?: sourceBook.bookUrl
+                        append(" - ")
+                        append(desc)
+                    }
+                }
+            }
+            selector(R.string.select_update_source, sourceNames) { _, index ->
+                showBookInfo(sourceBooks[index])
+            }
+        }
+    }
+
     override fun isInBookshelf(book: SearchBook): Boolean {
         return viewModel.isInBookShelf(book)
     }

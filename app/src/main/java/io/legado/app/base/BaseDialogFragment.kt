@@ -19,8 +19,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.lib.theme.applyUiBodyTypefaceDeep
-import io.legado.app.lib.theme.uiTypeface
+import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.lib.theme.dialogSurfaceBackground
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.setBackgroundKeepPadding
@@ -91,7 +90,7 @@ abstract class BaseDialogFragment(
             view.background = requireContext().dialogSurfaceBackground
         }
         if (!AppConfig.isEInkMode) {
-            view.applyUiBodyTypefaceDeep(requireContext().uiTypeface())
+            view.applyUiBodyTypeface(requireContext())
         }
         onFragmentCreated(view, savedInstanceState)
         observeLiveBus()

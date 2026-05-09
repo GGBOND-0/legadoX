@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import io.legado.app.R
 import io.legado.app.lib.theme.primaryTextColor
+import io.legado.app.lib.theme.applyUiToolbarTypeface
 import io.legado.app.ui.widget.TitleBar
 import io.legado.app.ui.widget.dialog.TextDialog
 
@@ -98,6 +99,7 @@ private fun View.applyRowUiDialogTitleStyle() {
 private fun Toolbar.applyDialogTitleContentColor(@ColorInt color: Int) {
     setTitleTextColor(color)
     setSubtitleTextColor(color)
+    applyUiToolbarTypeface()
     navigationIcon?.setTintMutate(color)
     overflowIcon?.setTintMutate(color)
     menu.children.forEach {

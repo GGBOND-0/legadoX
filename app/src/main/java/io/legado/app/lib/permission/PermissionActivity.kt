@@ -15,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.lib.dialogs.setUiTitle
 import io.legado.app.utils.registerForActivityResult
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.launch
@@ -219,7 +220,7 @@ class PermissionActivity : AppCompatActivity() {
             }
         }
         rationaleDialog = AlertDialog.Builder(this)
-            .setTitle(R.string.dialog_title)
+            .setUiTitle(this, R.string.dialog_title)
             .setMessage(rationale)
             .setPositiveButton(R.string.dialog_setting) { _, _ ->
                 onOk.invoke()

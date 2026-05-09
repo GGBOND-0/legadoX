@@ -24,6 +24,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.UiCorner
 import io.legado.app.lib.theme.accentColor
+import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.lib.theme.secondaryTextColor
 import io.legado.app.ui.about.ReadHeatmapCell
@@ -417,6 +418,7 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
         items.forEachIndexed { index, item ->
             val itemBinding =
                 ItemReadRecordRecentBookBinding.inflate(layoutInflater, binding.llRecentBooks, false)
+                    .applyUiBodyTypeface(requireContext())
             itemBinding.vAccent.background = createFillDrawable(accentColor, 3f)
             itemBinding.tvBookName.text = item.book.name
             itemBinding.tvBookMeta.text = buildRecentBookMeta(item.book)
@@ -451,6 +453,7 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
         items.forEachIndexed { index, item ->
             val itemBinding =
                 ItemReadRecordDaySummaryBinding.inflate(layoutInflater, binding.llDailyRecords, false)
+                    .applyUiBodyTypeface(requireContext())
             itemBinding.tvDayTitle.text = item.date.format(fullDayFormatter)
             itemBinding.tvDaySubtitle.text = buildDaySubtitle(item.date)
             itemBinding.tvDayTime.text = formatDuring(item.readTime)
@@ -516,6 +519,7 @@ class ReadRecordFragment() : BaseFragment(R.layout.activity_read_record), MainFr
         items.forEachIndexed { index, item ->
             val rowBinding =
                 io.legado.app.databinding.ItemReadRecordRankBinding.inflate(layoutInflater, binding.llReadRank, false)
+                    .applyUiBodyTypeface(requireContext())
             rowBinding.ivCover.loadReadRecordCover(item.book?.getDisplayCover() ?: item.snapshot?.displayCover())
             rowBinding.tvName.text = item.book?.name ?: item.snapshot?.name ?: item.displayName
             val author = item.book?.author ?: item.snapshot?.author ?: item.displayAuthor

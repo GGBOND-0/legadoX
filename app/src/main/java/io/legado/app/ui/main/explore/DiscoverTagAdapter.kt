@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.lib.theme.UiCorner
+import io.legado.app.lib.theme.uiTypeface
 
 data class DiscoverTagItem(
     val kind: ExploreKind,
@@ -31,6 +32,7 @@ class DiscoverTagAdapter(
             ContextCompat.getColor(parent.context, R.color.transparent10),
             UiCorner.actionRadius(parent.context)
         )
+        view.typeface = parent.context.uiTypeface()
         return ViewHolder(view)
     }
 

@@ -22,6 +22,7 @@ import io.legado.app.R
 import io.legado.app.lib.theme.UiCorner
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.lib.theme.secondaryTextColor
+import io.legado.app.lib.theme.uiTypeface
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.printOnDebug
 
@@ -61,6 +62,7 @@ class SearchView @JvmOverloads constructor(
                 mSearchHintIcon = this.context.getDrawable(R.drawable.ic_search_hint)
             }
             // 改变字体
+            textView!!.typeface = context.uiTypeface()
             textView!!.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             textView!!.gravity = Gravity.CENTER_VERTICAL
             textView!!.setTextColor(context.primaryTextColor)

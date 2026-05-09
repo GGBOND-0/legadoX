@@ -11,6 +11,7 @@ import io.legado.app.R
 import io.legado.app.databinding.ItemSourceEditBinding
 import io.legado.app.databinding.ItemSourceEditCheckBoxBinding
 import io.legado.app.help.config.AppConfig
+import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.ui.widget.code.addJsPattern
 import io.legado.app.ui.widget.code.addJsonPattern
 import io.legado.app.ui.widget.code.addLegadoPattern
@@ -38,12 +39,14 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             EditEntity.ViewType.checkBox -> {
                 val binding = ItemSourceEditCheckBoxBinding
                     .inflate(LayoutInflater.from(parent.context), parent, false)
+                    .applyUiBodyTypeface(parent.context)
                 CheckBoxViewHolder(binding)
             }
 
             else -> {
                 val binding = ItemSourceEditBinding
                     .inflate(LayoutInflater.from(parent.context), parent, false)
+                    .applyUiBodyTypeface(parent.context)
                 binding.editText.addLegadoPattern()
                 binding.editText.addJsonPattern()
                 binding.editText.addJsPattern()

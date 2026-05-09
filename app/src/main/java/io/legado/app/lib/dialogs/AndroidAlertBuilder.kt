@@ -8,20 +8,19 @@ import android.view.View
 import androidx.appcompat.app.AlertDialog
 import io.legado.app.R
 import io.legado.app.help.config.AppConfig
-import io.legado.app.lib.theme.applyUiBodyTypefaceDeep
+import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.lib.theme.dialogSurfaceBackground
-import io.legado.app.lib.theme.uiTypeface
 import io.legado.app.utils.applyTint
 
 internal class AndroidAlertBuilder(override val ctx: Context) : AlertBuilder<AlertDialog> {
     private val builder = AlertDialog.Builder(ctx)
 
     override fun setTitle(title: CharSequence) {
-        builder.setTitle(title)
+        builder.setUiTitle(ctx, title)
     }
 
     override fun setTitle(titleResource: Int) {
-        builder.setTitle(titleResource)
+        setTitle(ctx.getString(titleResource))
     }
 
     override fun setMessage(message: CharSequence) {
@@ -41,12 +40,12 @@ internal class AndroidAlertBuilder(override val ctx: Context) : AlertBuilder<Ale
     }
 
     override fun setCustomTitle(customTitle: View) {
-        customTitle.applyUiBodyTypefaceDeep(ctx.uiTypeface())
+        customTitle.applyUiBodyTypeface(ctx)
         builder.setCustomTitle(customTitle)
     }
 
     override fun setCustomView(customView: View) {
-        customView.applyUiBodyTypefaceDeep(ctx.uiTypeface())
+        customView.applyUiBodyTypeface(ctx)
         builder.setView(customView)
     }
 

@@ -7,7 +7,12 @@ import android.widget.EditText
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.widget.SearchView
+import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
+import androidx.core.view.children
+import androidx.viewbinding.ViewBinding
+import com.google.android.material.tabs.TabLayout
 import io.legado.app.R
 import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.widget.TitleBar
@@ -114,9 +119,59 @@ fun View.applyUiBodyTypefaceDeep(typeface: Typeface) {
     }
 }
 
+fun View.applyUiBodyTypeface(context: Context) {
+    applyUiBodyTypefaceDeep(context.uiTypeface())
+}
+
+fun <VB : ViewBinding> VB.applyUiBodyTypeface(context: Context): VB {
+    root.applyUiBodyTypeface(context)
+    return this
+}
+
 fun TextView.applyUiTitleTypeface(context: Context) {
     setTag(R.id.ui_title_typeface_role, true)
     typeface = context.titleTypeface()
+}
+
+fun Toolbar.applyUiToolbarTypeface(context: Context = this.context) {
+    val titleText = title?.toString().orEmpty()
+    val subtitleText = subtitle?.toString().orEmpty()
+    fun apply() {
+        children.filterIsInstance<TextView>().forEach { textView ->
+            val text = textView.text?.toString().orEmpty()
+            when {
+                titleText.isNotEmpty() && text == titleText -> {
+                    textView.applyUiTitleTypeface(context)
+                }
+                subtitleText.isNotEmpty() && text == subtitleText -> {
+                    textView.applyUiMenuItemTypeface(context)
+                }
+            }
+        }
+    }
+    apply()
+    post { apply() }
+}
+
+fun TabLayout.applyUiTabTypeface(context: Context = this.context) {
+    fun apply() {
+        for (index in 0 until tabCount) {
+            getTabAt(index)?.customView?.applyUiMenuTypefaceDeep(context)
+        }
+        applyUiMenuTypefaceDeep(context)
+    }
+    apply()
+    post { apply() }
+}
+
+fun SearchView.applyUiSearchTypeface(context: Context = this.context) {
+    fun apply() {
+        applyUiBodyTypeface(context)
+        findViewById<TextView>(androidx.appcompat.R.id.search_src_text)?.typeface =
+            context.uiTypeface()
+    }
+    apply()
+    post { apply() }
 }
 
 fun TextView.applyUiMenuItemTypeface(context: Context) {

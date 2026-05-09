@@ -4,10 +4,14 @@ import android.content.Context
 import android.widget.NumberPicker
 import androidx.appcompat.app.AlertDialog
 import io.legado.app.R
+import io.legado.app.lib.dialogs.setUiTitle
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.hideSoftInput
 
-class NumberPickerDialog(context: Context, private val isDecimalMode: Boolean = false) {
+class NumberPickerDialog(
+    private val context: Context,
+    private val isDecimalMode: Boolean = false
+) {
     private val builder = AlertDialog.Builder(context)
     private var numberPicker: NumberPicker? = null
     private var maxValue: Int? = null
@@ -19,7 +23,7 @@ class NumberPickerDialog(context: Context, private val isDecimalMode: Boolean = 
     }
 
     fun setTitle(title: String): NumberPickerDialog {
-        builder.setTitle(title)
+        builder.setUiTitle(context, title)
         return this
     }
 

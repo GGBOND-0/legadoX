@@ -21,6 +21,8 @@ import io.legado.app.databinding.ActivityChapterListBinding
 import io.legado.app.help.book.isLocalTxt
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.accentColor
+import io.legado.app.lib.theme.applyUiSearchTypeface
+import io.legado.app.lib.theme.applyUiTabTypeface
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.about.AppLogDialog
@@ -64,6 +66,7 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
         tabLayout.setupWithViewPager(binding.viewPager)
         tabLayout.tabGravity = TabLayout.GRAVITY_CENTER
         setupCenteredTabs()
+        tabLayout.applyUiTabTypeface(this)
         viewModel.bookData.observe(this) {
             menu?.setGroupVisible(R.id.menu_group_text, it.isLocalTxt)
         }
@@ -96,6 +99,7 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
         this.menu = menu
         val search = menu.findItem(R.id.menu_search)
         searchView = (search.actionView as SearchView).apply {
+            applyUiSearchTypeface(this@TocActivity)
             applyTint(primaryTextColor)
             maxWidth = resources.displayMetrics.widthPixels
             onActionViewCollapsed()

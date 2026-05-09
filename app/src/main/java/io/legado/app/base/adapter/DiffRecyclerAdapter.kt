@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
+import io.legado.app.lib.theme.applyUiBodyTypeface
 import splitties.views.onLongClick
 
 /**
@@ -124,7 +125,9 @@ abstract class DiffRecyclerAdapter<ITEM, VB : ViewBinding>(protected val context
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
-        return ItemViewHolder(getViewBinding(parent))
+        return ItemViewHolder(getViewBinding(parent).apply {
+            applyUiBodyTypeface(context)
+        })
     }
 
     protected abstract fun getViewBinding(parent: ViewGroup): VB

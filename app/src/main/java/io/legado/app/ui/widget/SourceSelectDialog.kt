@@ -16,11 +16,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.lib.theme.UiCorner
+import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.lib.theme.applyUiLabelStyle
 import io.legado.app.lib.theme.applyUiSectionTitleStyle
-import io.legado.app.lib.theme.applyUiBodyTypefaceDeep
 import io.legado.app.lib.theme.primaryTextColor
-import io.legado.app.lib.theme.uiTypeface
 import io.legado.app.utils.dpToPx
 
 object SourceSelectDialog {
@@ -80,7 +79,7 @@ object SourceSelectDialog {
                 }
             })
         }
-        searchView.applyUiBodyTypefaceDeep(context.uiTypeface())
+        searchView.applyUiBodyTypeface(context)
         val recyclerView = RecyclerView(context).apply {
             layoutManager = LinearLayoutManager(context)
             this.adapter = adapter

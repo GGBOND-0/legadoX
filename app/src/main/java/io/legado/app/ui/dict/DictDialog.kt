@@ -21,6 +21,8 @@ import io.legado.app.help.GlideImageGetter
 import io.legado.app.help.TextViewTagHandler
 import io.legado.app.lib.theme.UiCorner
 import io.legado.app.lib.theme.accentColor
+import io.legado.app.lib.theme.applyUiMenuItemTypeface
+import io.legado.app.lib.theme.applyUiTabTypeface
 import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.lib.theme.secondaryTextColor
 import io.legado.app.ui.widget.dialog.PhotoDialog
@@ -164,6 +166,7 @@ class DictDialog() : BaseDialogFragment(R.layout.dialog_dict) {
                 })
             }
             setupTabLayoutMode(it.size)
+            binding.tabLayout.applyUiTabTypeface(requireContext())
             updateDictTabs()
         }
     }
@@ -177,6 +180,7 @@ class DictDialog() : BaseDialogFragment(R.layout.dialog_dict) {
             isSelected = selected
             setTextColor(if (selected) accentColor else secondaryTextColor)
             textSize = 14f
+            applyUiMenuItemTypeface(requireContext())
             setPadding(14.dpToPx(), 8.dpToPx(), 14.dpToPx(), 8.dpToPx())
             background = UiCorner.actionSelector(
                 android.graphics.Color.TRANSPARENT,

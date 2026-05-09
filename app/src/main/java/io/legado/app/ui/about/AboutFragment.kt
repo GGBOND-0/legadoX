@@ -49,6 +49,7 @@ class AboutFragment : PreferenceFragmentCompat() {
     override fun onPreferenceTreeClick(preference: Preference): Boolean {
         when (preference.key) {
             "contributors" -> openUrl(R.string.contributors_url)
+            "telegram" -> openUrl(R.string.telegram_channel_url)
             "update_log" -> showMdFile(getString(R.string.update_log), "updateLog.md")
             "mail" -> requireContext().sendMail(getString(R.string.email))
             "license" -> showMdFile(getString(R.string.license), "LICENSE.md")

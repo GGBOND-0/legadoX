@@ -1242,6 +1242,8 @@
     <string name="scope_content">Act on the content</string>
     <string name="join_qq_channel">Join QQ channel</string>
     <string name="qq_channel_summary">点击加入阅读QQ频道</string>
+    <string name="join_telegram_channel">Join Telegram channel</string>
+    <string name="telegram_channel_summary">Tap to join the Telegram channel</string>
     <string name="menu_refresh_dur">Refresh the current chapter</string>
     <string name="menu_refresh_after">Refresh the chapter after</string>
     <string name="menu_refresh_all">Refresh all chapters</string>

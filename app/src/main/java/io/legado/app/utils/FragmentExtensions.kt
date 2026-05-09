@@ -36,10 +36,12 @@ inline fun <reified T : DialogFragment> Fragment.showDialogFragment(
     val bundle = Bundle()
     bundle.apply(arguments)
     dialog.arguments = bundle
+    dialog.applyRowUiDialogTitleStyle(childFragmentManager)
     dialog.show(childFragmentManager, T::class.simpleName)
 }
 
 fun Fragment.showDialogFragment(dialogFragment: DialogFragment) {
+    dialogFragment.applyRowUiDialogTitleStyle(childFragmentManager)
     dialogFragment.show(childFragmentManager, dialogFragment::class.simpleName)
 }
 

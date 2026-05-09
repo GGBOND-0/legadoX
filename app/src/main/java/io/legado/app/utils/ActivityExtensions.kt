@@ -16,11 +16,17 @@ import android.view.WindowMetrics
 import android.widget.FrameLayout
 import androidx.annotation.ColorInt
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.core.view.WindowCompat
+import androidx.core.view.children
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import io.legado.app.R
+import io.legado.app.lib.theme.primaryTextColor
+import io.legado.app.ui.widget.TitleBar
 import io.legado.app.ui.widget.dialog.TextDialog
 
 inline fun <reified T : DialogFragment> AppCompatActivity.showDialogFragment(
@@ -31,6 +37,7 @@ inline fun <reified T : DialogFragment> AppCompatActivity.showDialogFragment(
     val bundle = Bundle()
     bundle.apply(arguments)
     dialog.arguments = bundle
+    dialog.applyRowUiDialogTitleStyle(supportFragmentManager)
     dialog.show(supportFragmentManager, T::class.simpleName)
 }
 
@@ -43,7 +50,74 @@ inline fun <reified T : DialogFragment> AppCompatActivity.dismissDialogFragment(
 }
 
 fun AppCompatActivity.showDialogFragment(dialogFragment: DialogFragment) {
+    dialogFragment.applyRowUiDialogTitleStyle(supportFragmentManager)
     dialogFragment.show(supportFragmentManager, dialogFragment::class.simpleName)
+}
+
+@PublishedApi
+internal fun DialogFragment.applyRowUiDialogTitleStyle(fragmentManager: FragmentManager) {
+    fragmentManager.registerFragmentLifecycleCallbacks(
+        object : FragmentManager.FragmentLifecycleCallbacks() {
+            override fun onFragmentViewCreated(
+                fm: FragmentManager,
+                f: Fragment,
+                v: View,
+                savedInstanceState: Bundle?
+            ) {
+                if (f !== this@applyRowUiDialogTitleStyle) {
+                    return
+                }
+                v.applyRowUiDialogTitleStyle()
+                v.post { view?.applyRowUiDialogTitleStyle() }
+                fm.unregisterFragmentLifecycleCallbacks(this)
+            }
+
+            override fun onFragmentDestroyed(fm: FragmentManager, f: Fragment) {
+                if (f === this@applyRowUiDialogTitleStyle) {
+                    fm.unregisterFragmentLifecycleCallbacks(this)
+                }
+            }
+        },
+        false
+    )
+}
+
+private fun View.applyRowUiDialogTitleStyle() {
+    val titleBackground = context.getCompatColor(R.color.background_menu)
+    val titleContent = context.primaryTextColor
+    findViews(TitleBar::class.java).forEach {
+        it.setBackgroundColor(titleBackground)
+        it.toolbar.applyDialogTitleContentColor(titleContent)
+    }
+    findViews(Toolbar::class.java).forEach {
+        it.setBackgroundColor(titleBackground)
+        it.applyDialogTitleContentColor(titleContent)
+    }
+}
+
+private fun Toolbar.applyDialogTitleContentColor(@ColorInt color: Int) {
+    setTitleTextColor(color)
+    setSubtitleTextColor(color)
+    navigationIcon?.setTintMutate(color)
+    overflowIcon?.setTintMutate(color)
+    menu.children.forEach {
+        it.icon?.setTintMutate(color)
+    }
+}
+
+private fun <T : View> View.findViews(clazz: Class<T>): List<T> {
+    val views = mutableListOf<T>()
+    fun View.collect() {
+        if (clazz.isInstance(this)) {
+            @Suppress("UNCHECKED_CAST")
+            views.add(this as T)
+        }
+        if (this is ViewGroup) {
+            children.forEach { it.collect() }
+        }
+    }
+    collect()
+    return views
 }
 
 val WindowManager.windowSize: DisplayMetrics

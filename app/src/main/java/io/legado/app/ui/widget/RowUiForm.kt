@@ -258,10 +258,10 @@ object RowUiForm {
 
     private fun createRowLayoutParams(rowUi: RowUi): FlexboxLayout.LayoutParams {
         val style = rowUi.style()
-        val width = if (style.layout_flexBasisPercent >= 0f || style.layout_flexGrow > 0f) {
-            0
-        } else {
-            FlexboxLayout.LayoutParams.MATCH_PARENT
+        val width = when {
+            style.layout_flexBasisPercent >= 0f -> 0
+            style.layout_flexGrow > 0f -> FlexboxLayout.LayoutParams.WRAP_CONTENT
+            else -> FlexboxLayout.LayoutParams.MATCH_PARENT
         }
         return FlexboxLayout.LayoutParams(
             width,

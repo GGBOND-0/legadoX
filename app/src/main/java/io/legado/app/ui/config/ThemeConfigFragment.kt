@@ -1,6 +1,7 @@
 package io.legado.app.ui.config
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
@@ -190,6 +191,7 @@ class ThemeConfigFragment : PreferenceFragment(),
             PreferKey.transparentStatusBar -> recreateActivities()
             PreferKey.immNavigationBar -> recreateActivities()
             PreferKey.moveSearchToBookshelf -> postEvent(key, getPrefBoolean(key))
+            PreferKey.showReadRecord -> postEvent(EventBus.NOTIFY_MAIN, true)
             PreferKey.cPrimary,
             PreferKey.cAccent,
             PreferKey.cBackground,
@@ -232,6 +234,10 @@ class ThemeConfigFragment : PreferenceFragment(),
 
             "coverConfig" -> startActivity<ConfigActivity> {
                 putExtra("configTag", ConfigTag.COVER_CONFIG)
+            }
+
+            "discoverySubscriptionSettings" -> startActivity<ConfigActivity> {
+                putExtra("configTag", ConfigTag.DISCOVERY_SUBSCRIPTION_CONFIG)
             }
 
         }

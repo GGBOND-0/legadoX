@@ -146,11 +146,6 @@ class OtherConfigFragment : PreferenceFragment(),
             PreferKey.contentSelectMenuConfig -> ContentSelectMenuConfigDialog()
                 .show(parentFragmentManager, "contentSelectMenuConfig")
             PreferKey.uploadRule -> showDialogFragment<DirectLinkUploadConfig>()
-            "discoverySubscriptionSettings" -> {
-                startActivity(Intent(requireContext(), ConfigActivity::class.java).apply {
-                    putExtra("configTag", ConfigTag.DISCOVERY_SUBSCRIPTION_CONFIG)
-                })
-            }
             PreferKey.checkSource -> showDialogFragment<CheckSourceConfig>()
             PreferKey.bitmapCacheSize -> {
                 NumberPickerDialog(requireContext())
@@ -226,7 +221,6 @@ class OtherConfigFragment : PreferenceFragment(),
                 setProcessTextEnable(it.getBoolean(key, true))
             }
 
-            PreferKey.showReadRecord -> postEvent(EventBus.NOTIFY_MAIN, true)
             PreferKey.language -> listView.postDelayed(1000) {
                 appCtx.restart()
             }

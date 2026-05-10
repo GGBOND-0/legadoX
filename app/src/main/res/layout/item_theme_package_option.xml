@@ -2,14 +2,15 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="44dp"
-    android:background="@drawable/bg_preference_item_modern"
+    android:layout_height="wrap_content"
+    android:minHeight="44dp"
+    android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp">
+    android:paddingStart="6dp"
+    android:paddingEnd="6dp">
 
     <TextView
         android:id="@+id/tv_title"
@@ -21,7 +22,7 @@
         android:maxLines="1"
         android:textColor="@color/primaryText"
         android:textSize="14sp"
-        tools:text="主色调" />
+        tools:text="" />
 
     <View
         android:id="@+id/view_swatch"
@@ -41,6 +42,6 @@
         android:maxLines="1"
         android:textColor="@color/secondaryText"
         android:textSize="12sp"
-        tools:text="#795548" />
+        tools:text="" />
 
 </LinearLayout>

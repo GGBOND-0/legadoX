@@ -1343,6 +1343,9 @@
     <string name="page_animation_speed_dialog_title">Page turn animation duration (ms)</string>
     <string name="page_animation_speed_summary">Adjust the click page turn animation duration</string>
     <string name="page_animation_speed_value">%sms</string>
+    <string name="key_page_animation_speed_title">Key page turn animation speed</string>
+    <string name="key_page_animation_speed_dialog_title">Key page turn animation duration (ms)</string>
+    <string name="key_page_animation_speed_summary">Adjust the key page turn animation duration</string>
     <string name="rule_image_decode">Decode Image(imageDecode)</string>
     <string name="like_source">Like</string>
     <string name="not_like_source">Not like</string>
@@ -1832,6 +1835,10 @@
     <string name="advanced_title_input_url">Input URL</string>
     <string name="advanced_title_rule_error">Rule error: %1$s</string>
     <string name="advanced_title_preview_template">s1: %1$s\ns2: %2$s</string>
+    <string name="theme_tab_color">Color</string>
+    <string name="theme_tab_image">Image</string>
+    <string name="theme_tab_interface">Interface</string>
+    <string name="theme_tab_font">Font</string>
     <string name="theme_color_primary">Primary color</string>
     <string name="theme_color_accent">Accent color</string>
     <string name="theme_color_background">Background color</string>

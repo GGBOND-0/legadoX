@@ -10,6 +10,7 @@ import androidx.annotation.CallSuper
 import com.google.android.material.snackbar.Snackbar
 import io.legado.app.R
 import io.legado.app.help.book.isEpub
+import io.legado.app.help.config.AppConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.PageView
 import io.legado.app.ui.book.read.page.ReadView
@@ -127,8 +128,8 @@ abstract class PageDelegate(protected val readView: ReadView) {
     open fun keyTurnPage(direction: PageDirection) {
         if (isRunning) return
         when (direction) {
-            PageDirection.NEXT -> nextPageByAnim(100)
-            PageDirection.PREV -> prevPageByAnim(100)
+            PageDirection.NEXT -> nextPageByAnim(AppConfig.keyPageAnimationSpeed)
+            PageDirection.PREV -> prevPageByAnim(AppConfig.keyPageAnimationSpeed)
             else -> return
         }
     }

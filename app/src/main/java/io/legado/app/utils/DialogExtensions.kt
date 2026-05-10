@@ -2,6 +2,10 @@ package io.legado.app.utils
 
 import android.app.Activity
 import android.app.Dialog
+import android.content.Context
+import android.content.ContextWrapper
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.view.Gravity
 import android.view.View
@@ -9,11 +13,14 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 import androidx.core.view.forEach
 import androidx.fragment.app.DialogFragment
+import io.legado.app.R
+import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.Selector
 import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.accentColor
@@ -22,6 +29,7 @@ import splitties.systemservices.windowManager
 
 fun AlertDialog.applyTint(): AlertDialog {
     window?.setBackgroundDrawable(context.dialogSurfaceBackground)
+    applyAdaptiveDim()
     val colorStateList = Selector.colorBuild()
         .setDefaultColor(ThemeStore.accentColor(context))
         .setPressedColor(ColorUtils.darkenColor(ThemeStore.accentColor(context)))
@@ -42,6 +50,49 @@ fun AlertDialog.applyTint(): AlertDialog {
         applyMaxWidthIfFloating()
     }
     return this
+}
+
+fun Dialog.applyAdaptiveDim() {
+    if (AppConfig.isEInkMode) return
+    val isLightBackground = ColorUtils.isColorLight(
+        ContextCompat.getColor(context, R.color.background_card)
+    )
+    if (isLightBackground) return
+    val activity = context.findActivity() ?: return
+    window?.run {
+        clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        val attr = attributes
+        attr.dimAmount = 0f
+        attributes = attr
+    }
+    val activityDecor = activity.window.decorView
+    val dimForeground = ColorDrawable(ColorUtils.withAlpha(Color.WHITE, NIGHT_DIALOG_DIM_ALPHA))
+    fun addOverlay() {
+        dimForeground.setBounds(0, 0, activityDecor.width, activityDecor.height)
+        activityDecor.overlay.add(dimForeground)
+    }
+    if (activityDecor.width > 0 && activityDecor.height > 0) {
+        addOverlay()
+    } else {
+        activityDecor.post { addOverlay() }
+    }
+    window?.decorView?.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) = Unit
+
+        override fun onViewDetachedFromWindow(v: View) {
+            v.removeOnAttachStateChangeListener(this)
+            activityDecor.overlay.remove(dimForeground)
+        }
+    })
+}
+
+private fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 fun AlertDialog.requestInputMethod() {
@@ -145,3 +196,5 @@ fun Dialog.keepScreenOn(on: Boolean) {
         }
     }
 }
+
+private const val NIGHT_DIALOG_DIM_ALPHA = 0.12f

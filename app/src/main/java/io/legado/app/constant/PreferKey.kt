@@ -208,6 +208,7 @@ object PreferKey {
     const val pageTouchSlop = "pageTouchSlop"
     const val pageTouchClick = "pageTouchClick"
     const val pageAnimationSpeed = "pageAnimationSpeed"
+    const val keyPageAnimationSpeed = "keyPageAnimationSpeed"
     const val showAddToShelfAlert = "showAddToShelfAlert"
     const val ignoreAudioFocus = "ignoreAudioFocus"
     const val parallelExportBook = "parallelExportBook"

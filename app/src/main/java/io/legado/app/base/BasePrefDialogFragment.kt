@@ -11,6 +11,7 @@ import io.legado.app.R
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.lib.theme.dialogSurfaceBackground
+import io.legado.app.utils.applyAdaptiveDim
 import io.legado.app.utils.dpToPx
 
 
@@ -45,6 +46,7 @@ abstract class BasePrefDialogFragment(
             })
         } else {
             dialog?.window?.setBackgroundDrawableResource(R.color.transparent)
+            dialog?.applyAdaptiveDim()
         }
     }
 

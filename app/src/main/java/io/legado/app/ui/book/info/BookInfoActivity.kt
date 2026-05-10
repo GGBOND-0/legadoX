@@ -293,9 +293,7 @@ class BookInfoActivity :
         viewModel.bookData.observe(this) { showBook(it) }
         viewModel.chapterListData.observe(this) {
             upLoading(false, it)
-            if (detailPage == DetailPage.TOC) {
-                renderTocPreview(it)
-            }
+            showTocLoading(false)
         }
         viewModel.bookInfoLoadingData.observe(this) {
             showIntroLoading(it)
@@ -975,17 +973,16 @@ class BookInfoActivity :
 
     private fun showTocLoading(isLoading: Boolean) = binding.run {
         if (!isLoading) {
-            if (tocLoadingVisible) {
-                tocLoadingVisible = false
-                if (detailPage == DetailPage.TOC) {
-                    renderTocPreview(viewModel.chapterListData.value)
-                }
+            tocLoadingVisible = false
+            if (detailPage == DetailPage.TOC) {
+                renderTocPreview(viewModel.chapterListData.value)
             }
             return@run
         }
         tocLoadingVisible = true
         tocPreviewChapters = emptyList()
         tocRenderedCount = 0
+        ivTocFullscreen.gone()
         showTocLoadingContent()
     }
 
@@ -1053,6 +1050,7 @@ class BookInfoActivity :
         if (tocLoadingVisible) {
             tocPreviewChapters = emptyList()
             tocRenderedCount = 0
+            ivTocFullscreen.gone()
             showTocLoadingContent()
             return@run
         }
@@ -1062,9 +1060,11 @@ class BookInfoActivity :
         if (chapters.isEmpty() || currentBook == null) {
             tocPreviewChapters = emptyList()
             tocRenderedCount = 0
+            ivTocFullscreen.gone()
             llTocPreview.addView(tocPreviewText(getString(R.string.chapter_list_empty), false))
             return@run
         }
+        ivTocFullscreen.visible()
         tocPreviewChapters = chapters
         val currentPosition = chapters.indexOfFirst { it.index == currentBook.durChapterIndex }
             .coerceAtLeast(0)
@@ -1091,13 +1091,6 @@ class BookInfoActivity :
             })
         }
         tocRenderedCount = nextCount
-        if (tocRenderedCount >= chapters.size) {
-            llTocPreview.addView(tocPreviewText(getString(R.string.view_toc), false).apply {
-                gravity = Gravity.CENTER
-                setTextColor(accentColor)
-                setOnClickListener { openChapterListSafely() }
-            })
-        }
     }
 
     private fun centerCurrentTocItem(currentIndex: Int) = binding.run {
@@ -1257,6 +1250,7 @@ class BookInfoActivity :
             applyIntroCollapseState()
         }
         tvTocView.setOnClickListener { openChapterListSafely() }
+        ivTocFullscreen.setOnClickListener { openChapterListSafely() }
         tvChangeGroup.setOnClickListener {
             viewModel.getBook()?.let {
                 showDialogFragment(

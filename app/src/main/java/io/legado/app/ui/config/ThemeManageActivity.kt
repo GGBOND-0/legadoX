@@ -101,6 +101,7 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
     private var pendingUiFontPath: String? = null
     private var pendingTitleFontPath: String? = null
     private var pendingFontTarget = FontTarget.UI
+    private var pendingEditTab = ThemeEditTab.COLOR
     private var loadVersion = 0
     private val pendingRemoteSyncTasks = linkedMapOf<String, RemoteSyncTask>()
     @Volatile
@@ -288,7 +289,6 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
             editDialogBinding = dialogBinding
             editingEntry = null
             customView { dialogBinding.root }
-            applyThemeEditFonts(dialogBinding)
             okButton { saveTheme(dialogBinding) }
             onDismiss {
                 editDialogBinding = null
@@ -296,7 +296,7 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
             }
             cancelButton()
         }
-        applyThemeEditDialogSize(dialog)
+        applyThemeEditDialogWindow(dialog)
     }
 
     private fun showEditDialog(entry: ThemePackageManager.Entry) {
@@ -313,7 +313,6 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
                     editDialogBinding = dialogBinding
                     editingEntry = localEntry
                     customView { dialogBinding.root }
-                    applyThemeEditFonts(dialogBinding)
                     okButton {
                         saveTheme(dialogBinding)
                         editDialogBinding = null
@@ -325,7 +324,7 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
                     }
                     cancelButton()
                 }
-                applyThemeEditDialogSize(dialog)
+                applyThemeEditDialogWindow(dialog)
             }.onFailure {
                 if (it.isJobCancellation()) return@onFailure
                 toastOnUi(getString(R.string.theme_package_read_failed, it.localizedMessage))
@@ -347,16 +346,73 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
         pendingTitleFontPath = current.titleFontPath ?: AppConfig.titleFontPath
         pendingUiCornerSearchFollow = current.uiCornerSearchFollow ?: AppConfig.uiCornerSearchFollow
         pendingUiCornerReplyFollow = current.uiCornerReplyFollow ?: AppConfig.uiCornerReplyFollow
+        pendingEditTab = ThemeEditTab.COLOR
         return DialogThemePackageEditBinding.inflate(layoutInflater).apply {
             etName.setText(current.themeName)
+            setupThemeEditTabs(this)
             setupColorRow(rowPrimary, R.string.theme_color_primary, current.primaryColor, colorPrimary)
             setupColorRow(rowAccent, R.string.theme_color_accent, current.accentColor, colorAccent)
             setupColorRow(rowBackground, R.string.theme_color_background, current.backgroundColor, colorBackground)
             setupColorRow(rowBottomBackground, R.string.theme_color_bottom_background, current.bottomBackground, colorBottomBackground)
             setupImageRow(rowMainBackground, R.string.theme_image_main_background, true)
             setupImageRow(rowBookInfoBackground, R.string.theme_image_book_info_background, false)
+            setupBlankRow(rowImageBlank1)
+            setupBlankRow(rowImageBlank2)
             setupInterfaceRows(this)
+            setupBlankRow(rowFontBlank)
+            applyThemeEditFonts(this)
+            showThemeEditTab(this, pendingEditTab, requestLayout = false)
             etName.isEnabled = entry?.source != ThemePackageManager.Source.REMOTE
+        }
+    }
+
+    private fun setupThemeEditTabs(binding: DialogThemePackageEditBinding) = binding.run {
+        tabEditBar.background = UiCorner.opaqueRounded(
+            ContextCompat.getColor(this@ThemeManageActivity, R.color.background_menu),
+            UiCorner.panelRadius(this@ThemeManageActivity)
+        )
+        listOf(
+            btnTabColor to ThemeEditTab.COLOR,
+            btnTabImage to ThemeEditTab.IMAGE,
+            btnTabInterface to ThemeEditTab.INTERFACE,
+            btnTabFont to ThemeEditTab.FONT
+        ).forEach { (tabView, tab) ->
+            tabView.setOnClickListener {
+                showThemeEditTab(this, tab)
+            }
+        }
+    }
+
+    private fun showThemeEditTab(
+        binding: DialogThemePackageEditBinding,
+        tab: ThemeEditTab,
+        requestLayout: Boolean = true
+    ) = binding.run {
+        pendingEditTab = tab
+        llColorGroup.visibility = if (tab == ThemeEditTab.COLOR) View.VISIBLE else View.GONE
+        llImageGroup.visibility = if (tab == ThemeEditTab.IMAGE) View.VISIBLE else View.GONE
+        llInterfaceGroup.visibility = if (tab == ThemeEditTab.INTERFACE) View.VISIBLE else View.GONE
+        llFontGroup.visibility = if (tab == ThemeEditTab.FONT) View.VISIBLE else View.GONE
+        val selectedBackground = ContextCompat.getColor(this@ThemeManageActivity, R.color.background_card)
+        listOf(
+            btnTabColor to ThemeEditTab.COLOR,
+            btnTabImage to ThemeEditTab.IMAGE,
+            btnTabInterface to ThemeEditTab.INTERFACE,
+            btnTabFont to ThemeEditTab.FONT
+        ).forEach { (tabView, itemTab) ->
+            tabView.isSelected = itemTab == tab
+            tabView.background = if (itemTab == tab) {
+                UiCorner.opaqueRounded(
+                    selectedBackground,
+                    UiCorner.actionRadius(this@ThemeManageActivity)
+                )
+            } else {
+                ColorDrawable(Color.TRANSPARENT)
+            }
+            tabView.setTextColor(primaryTextColor)
+        }
+        if (requestLayout) {
+            root.requestLayout()
         }
     }
 
@@ -376,14 +432,13 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
         }
         updateSwitchRow(rowSearchFollow, pendingUiCornerSearchFollow)
         updateSwitchRow(rowReplyFollow, pendingUiCornerReplyFollow)
-        applyThemeEditFonts(this)
     }
 
-    private fun applyThemeEditDialogSize(dialog: androidx.appcompat.app.AlertDialog) {
+    private fun applyThemeEditDialogWindow(dialog: androidx.appcompat.app.AlertDialog) {
         val metrics = resources.displayMetrics
         dialog.window?.setLayout(
             (metrics.widthPixels * EDIT_DIALOG_WIDTH_RATIO).toInt(),
-            (metrics.heightPixels * EDIT_DIALOG_HEIGHT_RATIO).toInt()
+            ViewGroup.LayoutParams.WRAP_CONTENT
         )
     }
 
@@ -392,17 +447,25 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
         binding.root.applyUiBodyTypefaceDeep(uiTf)
         val titleTf = loadUiTypeface(pendingTitleFontPath.orEmpty()) ?: titleTypeface()
         listOf(
+            binding.etName,
+            binding.btnTabColor,
+            binding.btnTabImage,
+            binding.btnTabInterface,
+            binding.btnTabFont,
             binding.rowPrimary.tvTitle,
             binding.rowAccent.tvTitle,
             binding.rowBackground.tvTitle,
             binding.rowBottomBackground.tvTitle,
             binding.rowMainBackground.tvTitle,
             binding.rowBookInfoBackground.tvTitle,
+            binding.rowImageBlank1.tvTitle,
+            binding.rowImageBlank2.tvTitle,
             binding.rowCornerScale.tvTitle,
             binding.rowLayoutAlpha.tvTitle,
             binding.rowFontScale.tvTitle,
             binding.rowUiFont.tvTitle,
             binding.rowTitleFont.tvTitle,
+            binding.rowFontBlank.tvTitle,
             binding.rowSearchFollow.tvTitle,
             binding.rowReplyFollow.tvTitle
         ).forEach {
@@ -508,6 +571,15 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
 
     private fun updateSwitchRow(row: ItemThemePackageOptionBinding, checked: Boolean) {
         row.tvValue.text = getString(if (checked) R.string.enable else R.string.disable)
+    }
+
+    private fun setupBlankRow(row: ItemThemePackageOptionBinding) {
+        row.tvTitle.text = "     "
+        row.tvValue.text = ""
+        row.viewSwatch.visibility = View.INVISIBLE
+        row.root.isClickable = false
+        row.root.isFocusable = false
+        row.root.background = ColorDrawable(Color.TRANSPARENT)
     }
 
     private fun setupColorRow(
@@ -1233,7 +1305,6 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
     companion object {
         private val themeRemoteSyncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         private const val EDIT_DIALOG_WIDTH_RATIO = 0.94f
-        private const val EDIT_DIALOG_HEIGHT_RATIO = 0.82f
         private const val DEFAULT_DAY_PRIMARY = 0xFFF1F2F6.toInt()
         private const val DEFAULT_NIGHT_PRIMARY = 0xFF252528.toInt()
         private const val requestMainBackground = 301
@@ -1253,6 +1324,13 @@ class ThemeManageActivity : BaseActivity<ActivityThemeManageBinding>(),
         DELETE_LOCAL(R.string.theme_delete_local),
         DELETE_REMOTE(R.string.theme_delete_remote),
         DELETE_BOTH(R.string.theme_delete_both)
+    }
+
+    private enum class ThemeEditTab {
+        COLOR,
+        IMAGE,
+        INTERFACE,
+        FONT
     }
 
     private enum class ThemeImageAction(val titleRes: Int) {

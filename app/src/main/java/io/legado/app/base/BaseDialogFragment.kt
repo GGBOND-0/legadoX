@@ -21,6 +21,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.lib.theme.dialogSurfaceBackground
+import io.legado.app.utils.applyAdaptiveDim
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.setBackgroundKeepPadding
 import kotlinx.coroutines.CoroutineScope
@@ -68,6 +69,7 @@ abstract class BaseDialogFragment(
             })
         } else {
             dialog?.window?.setBackgroundDrawableResource(R.color.transparent)
+            dialog?.applyAdaptiveDim()
         }
     }
 

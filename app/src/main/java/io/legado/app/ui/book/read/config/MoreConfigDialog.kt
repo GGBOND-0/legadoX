@@ -94,6 +94,7 @@ class MoreConfigDialog : BasePrefDialogFragment() {
             upPreferenceSummary(PreferKey.pageTouchSlop, slopSquare.toString())
             upPreferenceSummary(PreferKey.readMenuAlpha, AppConfig.readMenuAlpha.toString())
             upPreferenceSummary(PreferKey.pageAnimationSpeed, AppConfig.pageAnimationSpeed.toString())
+            upPreferenceSummary(PreferKey.keyPageAnimationSpeed, AppConfig.keyPageAnimationSpeed.toString())
             if (!CanvasRecorderFactory.isSupport) {
                 removePref(PreferKey.optimizeRender)
                 preferenceScreen.removePreferenceRecursively(PreferKey.optimizeRender)
@@ -267,6 +268,28 @@ class MoreConfigDialog : BasePrefDialogFragment() {
                             )
                         }
                 }
+
+                PreferKey.keyPageAnimationSpeed -> {
+                    NumberPickerDialog(requireContext())
+                        .setTitle(getString(R.string.key_page_animation_speed_dialog_title))
+                        .setMaxValue(2000)
+                        .setMinValue(0)
+                        .setValue(AppConfig.keyPageAnimationSpeed)
+                        .setCustomButton(R.string.btn_default_s) {
+                            AppConfig.keyPageAnimationSpeed = 100
+                            upPreferenceSummary(
+                                PreferKey.keyPageAnimationSpeed,
+                                AppConfig.keyPageAnimationSpeed.toString()
+                            )
+                        }
+                        .show {
+                            AppConfig.keyPageAnimationSpeed = it
+                            upPreferenceSummary(
+                                PreferKey.keyPageAnimationSpeed,
+                                AppConfig.keyPageAnimationSpeed.toString()
+                            )
+                        }
+                }
             }
             return super.onPreferenceTreeClick(preference)
         }
@@ -280,6 +303,8 @@ class MoreConfigDialog : BasePrefDialogFragment() {
                 PreferKey.readMenuAlpha -> preference.summary =
                     getString(R.string.ui_layout_alpha_value, AppConfig.readMenuAlpha)
                 PreferKey.pageAnimationSpeed -> preference.summary =
+                    getString(R.string.page_animation_speed_value, value)
+                PreferKey.keyPageAnimationSpeed -> preference.summary =
                     getString(R.string.page_animation_speed_value, value)
             }
         }

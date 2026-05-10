@@ -1501,6 +1501,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefInt(PreferKey.pageAnimationSpeed, value.coerceIn(0, 2000))
         }
 
+    var keyPageAnimationSpeed: Int
+        get() = appCtx.getPrefInt(PreferKey.keyPageAnimationSpeed, 100).coerceIn(0, 2000)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.keyPageAnimationSpeed, value.coerceIn(0, 2000))
+        }
+
     var sourceEditMaxLine: Int
         get() {
             val maxLine = appCtx.getPrefInt(PreferKey.sourceEditMaxLine, Int.MAX_VALUE)

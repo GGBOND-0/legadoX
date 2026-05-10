@@ -1186,6 +1186,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             )
         }
 
+    val moveSearchToBookshelf: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.moveSearchToBookshelf, false)
+
     var readUrlInBrowser: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.readUrlOpenInBrowser)
         set(value) {
@@ -1490,6 +1493,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         get() = appCtx.getPrefInt(PreferKey.readMenuAlpha, 100).coerceIn(35, 100)
         set(value) {
             appCtx.putPrefInt(PreferKey.readMenuAlpha, value.coerceIn(35, 100))
+        }
+
+    var pageAnimationSpeed: Int
+        get() = appCtx.getPrefInt(PreferKey.pageAnimationSpeed, 300).coerceIn(0, 2000)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.pageAnimationSpeed, value.coerceIn(0, 2000))
         }
 
     var sourceEditMaxLine: Int

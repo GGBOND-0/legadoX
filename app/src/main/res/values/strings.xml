@@ -883,6 +883,8 @@
     <string name="ui_layout_alpha_value">%d%%</string>
     <string name="ui_corner_search_follow">Search bars follow corner scale</string>
     <string name="ui_corner_search_follow_summary">Allow search bars to use the global corner radius scale</string>
+    <string name="move_search_to_bookshelf">Move search to bookshelf</string>
+    <string name="move_search_to_bookshelf_summary">Hide the home bottom search button and show search at the top right of the bookshelf</string>
     <string name="ui_corner_reply_follow">Reply bars follow corner scale</string>
     <string name="ui_corner_reply_follow_summary">Allow reply/input bars to use the global corner radius scale</string>
     <string name="btn_default_s">Default</string>
@@ -1337,6 +1339,10 @@
     <string name="read_bar_style_follow_page">read bar style follow page</string>
     <string name="read_menu_alpha">Read Menu Opacity</string>
     <string name="read_menu_alpha_summary">Adjust opacity for top/bottom menu panels</string>
+    <string name="page_animation_speed_title">Page turn animation speed</string>
+    <string name="page_animation_speed_dialog_title">Page turn animation duration (ms)</string>
+    <string name="page_animation_speed_summary">Adjust the click page turn animation duration</string>
+    <string name="page_animation_speed_value">%sms</string>
     <string name="rule_image_decode">Decode Image(imageDecode)</string>
     <string name="like_source">Like</string>
     <string name="not_like_source">Not like</string>

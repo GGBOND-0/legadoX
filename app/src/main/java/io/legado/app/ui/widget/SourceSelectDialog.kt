@@ -7,6 +7,7 @@ import android.text.TextUtils
 import android.view.View
 import android.view.Gravity
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -31,6 +32,7 @@ object SourceSelectDialog {
         selectedKey: String?,
         displayName: (T) -> String,
         searchTexts: (T) -> List<String>,
+        searchHint: String?,
         itemKey: (T) -> String,
         onSelect: (T) -> Unit
     ) {
@@ -54,7 +56,8 @@ object SourceSelectDialog {
             }
         }
         val searchView = SearchView(context).apply {
-            queryHint = context.getString(R.string.screen_find)
+            queryHint = searchHint ?: context.getString(R.string.screen)
+            setIconifiedByDefault(false)
             isIconified = false
             isSubmitButtonEnabled = false
             background = GradientDrawable().apply {
@@ -78,6 +81,11 @@ object SourceSelectDialog {
                     return true
                 }
             })
+            setOnCloseListener {
+                setQuery("", false)
+                isIconified = false
+                true
+            }
         }
         searchView.applyUiBodyTypeface(context)
         val recyclerView = RecyclerView(context).apply {
@@ -93,6 +101,8 @@ object SourceSelectDialog {
         }
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
+            isFocusable = true
+            isFocusableInTouchMode = true
             background = UiCorner.opaqueRounded(
                 ContextCompat.getColor(context, R.color.background_card),
                 UiCorner.panelRadius(context)
@@ -124,6 +134,11 @@ object SourceSelectDialog {
         dialog = AlertDialog.Builder(context)
             .setView(container)
             .create()
+        dialog.setOnShowListener {
+            container.requestFocus()
+            searchView.clearFocus()
+            dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        }
         dialog.show()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }

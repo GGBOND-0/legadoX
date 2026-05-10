@@ -666,10 +666,6 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
     }
 
     override fun finish() {
-        if (searchView.hasFocus()) {
-            searchView.clearFocus()
-            return
-        }
         super.finish()
     }
 

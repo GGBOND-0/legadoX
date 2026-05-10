@@ -39,6 +39,7 @@ import io.legado.app.utils.keepScreenOn
 import io.legado.app.utils.longSnackbar
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.sendToClip
+import io.legado.app.utils.applyNavigationBarMargin
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toggleSystemBar
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -98,6 +99,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         pooledWebView = WebViewPool.acquire(this)
         currentWebView = pooledWebView.realWebView
         binding.webViewContainer.addView(currentWebView)
+        binding.webViewContainer.applyNavigationBarMargin()
         currentWebView.post {
             currentWebView.clearHistory()
         }

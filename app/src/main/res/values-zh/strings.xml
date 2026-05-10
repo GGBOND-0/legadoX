@@ -731,6 +731,8 @@
     <string name="ui_layout_alpha_value">%d%%</string>
     <string name="ui_corner_search_follow">搜索栏跟随圆角</string>
     <string name="ui_corner_search_follow_summary">允许搜索栏使用全局圆角倍率</string>
+    <string name="move_search_to_bookshelf">搜索入口移到书架</string>
+    <string name="move_search_to_bookshelf_summary">隐藏主页底部搜索按钮，并在书架右上角显示搜索</string>
     <string name="ui_corner_reply_follow">回复栏跟随圆角</string>
     <string name="ui_corner_reply_follow_summary">允许回复/输入栏使用全局圆角倍率</string>
     <string name="btn_default_s">默认</string>
@@ -1180,6 +1182,10 @@
     <string name="read_bar_style_follow_page">工具栏样式跟随页面</string>
     <string name="read_menu_alpha">正文菜单不透明度</string>
     <string name="read_menu_alpha_summary">调整顶部与底部正文菜单的不透明程度</string>
+    <string name="page_animation_speed_title">点击翻页动画速度</string>
+    <string name="page_animation_speed_dialog_title">点击翻页动画时长（毫秒）</string>
+    <string name="page_animation_speed_summary">调整点击翻页动画的持续时间</string>
+    <string name="page_animation_speed_value">%sms</string>
     <string name="rule_image_decode">图片解密（imageDecode）</string>
     <string name="like_source">赞</string>
     <string name="not_like_source">踩</string>

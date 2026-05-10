@@ -93,6 +93,7 @@ class MoreConfigDialog : BasePrefDialogFragment() {
             addPreferencesFromResource(R.xml.pref_config_read)
             upPreferenceSummary(PreferKey.pageTouchSlop, slopSquare.toString())
             upPreferenceSummary(PreferKey.readMenuAlpha, AppConfig.readMenuAlpha.toString())
+            upPreferenceSummary(PreferKey.pageAnimationSpeed, AppConfig.pageAnimationSpeed.toString())
             if (!CanvasRecorderFactory.isSupport) {
                 removePref(PreferKey.optimizeRender)
                 preferenceScreen.removePreferenceRecursively(PreferKey.optimizeRender)
@@ -244,6 +245,28 @@ class MoreConfigDialog : BasePrefDialogFragment() {
                             postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                         }
                 }
+
+                PreferKey.pageAnimationSpeed -> {
+                    NumberPickerDialog(requireContext())
+                        .setTitle(getString(R.string.page_animation_speed_dialog_title))
+                        .setMaxValue(2000)
+                        .setMinValue(0)
+                        .setValue(AppConfig.pageAnimationSpeed)
+                        .setCustomButton(R.string.btn_default_s) {
+                            AppConfig.pageAnimationSpeed = 300
+                            upPreferenceSummary(
+                                PreferKey.pageAnimationSpeed,
+                                AppConfig.pageAnimationSpeed.toString()
+                            )
+                        }
+                        .show {
+                            AppConfig.pageAnimationSpeed = it
+                            upPreferenceSummary(
+                                PreferKey.pageAnimationSpeed,
+                                AppConfig.pageAnimationSpeed.toString()
+                            )
+                        }
+                }
             }
             return super.onPreferenceTreeClick(preference)
         }
@@ -256,6 +279,8 @@ class MoreConfigDialog : BasePrefDialogFragment() {
                     getString(R.string.page_touch_slop_summary, value)
                 PreferKey.readMenuAlpha -> preference.summary =
                     getString(R.string.ui_layout_alpha_value, AppConfig.readMenuAlpha)
+                PreferKey.pageAnimationSpeed -> preference.summary =
+                    getString(R.string.page_animation_speed_value, value)
             }
         }
 

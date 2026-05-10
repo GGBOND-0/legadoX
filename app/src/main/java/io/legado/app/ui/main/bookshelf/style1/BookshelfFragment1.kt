@@ -22,6 +22,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.applyUiTitleTypeface
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.main.bookshelf.BaseBookshelfFragment
 import io.legado.app.ui.main.bookshelf.style1.books.BooksFragment
 import io.legado.app.ui.widget.ModernActionPopup
@@ -31,6 +32,7 @@ import io.legado.app.utils.isCreated
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.setEdgeEffectColor
+import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
@@ -79,6 +81,10 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
         binding.viewPagerBookshelf.setEdgeEffectColor(primaryColor)
         binding.btnMore.setOnClickListener {
             showModernBookshelfMenu(it)
+        }
+        updateSearchButtonVisibility()
+        binding.btnSearch.setOnClickListener {
+            startActivity<SearchActivity>()
         }
         binding.llTitleSelect.setOnClickListener {
             showGroupSwitchMenu(it)
@@ -169,6 +175,15 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
 
     override fun gotoTop() {
         fragmentMap[groupId]?.gotoTop()
+    }
+
+    override fun onSearchPlacementChanged() {
+        updateSearchButtonVisibility()
+    }
+
+    private fun updateSearchButtonVisibility() {
+        binding.btnSearchContainer.visibility =
+            if (AppConfig.moveSearchToBookshelf) View.VISIBLE else View.GONE
     }
 
     private fun renderGroupTags() {

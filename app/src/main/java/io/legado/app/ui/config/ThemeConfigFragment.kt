@@ -39,6 +39,7 @@ import io.legado.app.utils.ImageCropHelper
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.externalFiles
+import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.inputStream
@@ -51,6 +52,8 @@ import io.legado.app.utils.setEdgeEffectColor
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import splitties.init.appCtx
 import java.io.FileOutputStream
 
@@ -65,6 +68,7 @@ class ThemeConfigFragment : PreferenceFragment(),
     private val requestCodeBookInfoBg = 123
     private val requestCodeBookInfoBgDark = 124
     private var pendingImageCropRequest: ImageCropHelper.Request? = null
+    private var recreateJob: Job? = null
     private val selectImage = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
             handleSelectedImage(uri, it.requestCode)
@@ -158,6 +162,7 @@ class ThemeConfigFragment : PreferenceFragment(),
 
     override fun onDestroy() {
         super.onDestroy()
+        recreateJob?.cancel()
         preferenceManager.sharedPreferences?.unregisterOnSharedPreferenceChangeListener(this)
     }
 
@@ -184,6 +189,7 @@ class ThemeConfigFragment : PreferenceFragment(),
             PreferKey.mainTransparentStatusBar -> recreateActivities()
             PreferKey.transparentStatusBar -> recreateActivities()
             PreferKey.immNavigationBar -> recreateActivities()
+            PreferKey.moveSearchToBookshelf -> postEvent(key, getPrefBoolean(key))
             PreferKey.cPrimary,
             PreferKey.cAccent,
             PreferKey.cBackground,
@@ -354,7 +360,11 @@ class ThemeConfigFragment : PreferenceFragment(),
     }
 
     private fun recreateActivities() {
-        postEvent(EventBus.RECREATE, "")
+        recreateJob?.cancel()
+        recreateJob = lifecycleScope.launch {
+            delay(300)
+            postEvent(EventBus.RECREATE, "")
+        }
     }
 
     private fun upPreferenceSummary(preferenceKey: String, value: String? = null) {

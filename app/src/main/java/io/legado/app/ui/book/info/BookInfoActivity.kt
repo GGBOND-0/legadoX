@@ -244,7 +244,9 @@ class BookInfoActivity :
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             view.revealOnFocusHint = false
         }
+        view.setTextIsSelectable(false)
         view.typeface = uiTypeface()
+        view.keepDetailTouchInside()
         view
     }
 
@@ -676,15 +678,7 @@ class BookInfoActivity :
             val webView = pooledWebView.realWebView
             webView.setBackgroundColor(Color.TRANSPARENT)
             webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-            webView.setOnTouchListener { _, event ->
-                when (event.actionMasked) {
-                    MotionEvent.ACTION_DOWN,
-                    MotionEvent.ACTION_MOVE -> binding.scrollView?.requestDisallowInterceptTouchEvent(true)
-                    MotionEvent.ACTION_UP,
-                    MotionEvent.ACTION_CANCEL -> binding.scrollView?.requestDisallowInterceptTouchEvent(false)
-                }
-                false
-            }
+            webView.keepDetailTouchInside()
             if (initIntroView || this.pooledWebView == null) {
                 initIntroView = false
                 this.pooledWebView = pooledWebView
@@ -992,6 +986,10 @@ class BookInfoActivity :
         tocLoadingVisible = true
         tocPreviewChapters = emptyList()
         tocRenderedCount = 0
+        showTocLoadingContent()
+    }
+
+    private fun showTocLoadingContent() = binding.run {
         llTocPreview.removeAllViews()
         llTocPreview.addView(
             loadingContent(getString(R.string.load_toc)),
@@ -1005,25 +1003,36 @@ class BookInfoActivity :
     private fun initDetailTabs() = binding.run {
         tvTabIntro.setOnClickListener { showDetailPage(DetailPage.INTRO) }
         tvTabToc.setOnClickListener { showDetailPage(DetailPage.TOC) }
+        val tocScrollView = tocScrollView as androidx.core.widget.NestedScrollView
+        tocScrollView.isNestedScrollingEnabled = false
         tocScrollView.setOnScrollChangeListener { view, _, scrollY, _, _ ->
             val child = tocScrollView.getChildAt(0) ?: return@setOnScrollChangeListener
             if (scrollY + view.height >= child.height - 48.dpToPx()) {
                 appendTocPreviewBatch()
             }
         }
-        tocScrollView.setOnTouchListener { _, event ->
-            when (event.actionMasked) {
+        showDetailPage(DetailPage.INTRO)
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun View.keepDetailTouchInside() {
+        setOnTouchListener { _, event ->
+            val disallowIntercept = when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN,
-                MotionEvent.ACTION_MOVE -> scrollView?.requestDisallowInterceptTouchEvent(true)
+                MotionEvent.ACTION_MOVE -> true
                 MotionEvent.ACTION_UP,
-                MotionEvent.ACTION_CANCEL -> scrollView?.requestDisallowInterceptTouchEvent(false)
+                MotionEvent.ACTION_CANCEL -> false
+                else -> return@setOnTouchListener false
             }
+            disallowDetailParentIntercept(disallowIntercept)
             false
         }
-        scrollView?.setOnTouchListener { _, event ->
-            detailPage == DetailPage.TOC && event.actionMasked == MotionEvent.ACTION_MOVE
-        }
-        showDetailPage(DetailPage.INTRO)
+    }
+
+    private fun View.disallowDetailParentIntercept(disallowIntercept: Boolean) {
+        parent?.requestDisallowInterceptTouchEvent(disallowIntercept)
+        binding.scrollView?.requestDisallowInterceptTouchEvent(disallowIntercept)
+        binding.refreshLayout?.requestDisallowInterceptTouchEvent(disallowIntercept)
     }
 
     private fun showDetailPage(page: DetailPage) = binding.run {
@@ -1041,6 +1050,12 @@ class BookInfoActivity :
     }
 
     private fun renderTocPreview(chapterList: List<BookChapter>?) = binding.run {
+        if (tocLoadingVisible) {
+            tocPreviewChapters = emptyList()
+            tocRenderedCount = 0
+            showTocLoadingContent()
+            return@run
+        }
         llTocPreview.removeAllViews()
         val chapters = chapterList.orEmpty().filterNot { it.isVolume }
         val currentBook = book
@@ -1086,6 +1101,7 @@ class BookInfoActivity :
     }
 
     private fun centerCurrentTocItem(currentIndex: Int) = binding.run {
+        val tocScrollView = tocScrollView as androidx.core.widget.NestedScrollView
         tocScrollView.post {
             val targetView = (0 until llTocPreview.childCount)
                 .asSequence()

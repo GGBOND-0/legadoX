@@ -416,6 +416,7 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         }
         bindMergedDiscoveryLongClick()
         applyBottomLayoutMode()
+        applySearchPlacementPreference()
     }
 
     private fun scheduleLiquidGlassSetup(delayMillis: Long = 0L) {
@@ -531,6 +532,7 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         viewPagerMain.swipeEnabled = !sidebarMode
         bottomControls.isVisible = !sidebarMode
         sideNavigationPanel.isVisible = sidebarMode
+        applySearchPlacementPreference()
         if (sidebarMode) {
             if (!sideNavigationOpen) {
                 sideNavigationGravity = AppConfig.bottomBarSidebarGravity
@@ -555,6 +557,64 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
             sideNavigationScrim.visibility = View.GONE
             sideNavigationPanel.visibility = View.GONE
             bottomNavigationView.menu.findItem(getBottomNavigationItemId(pagePosition))?.isChecked = true
+        }
+    }
+
+    private fun applySearchPlacementPreference() = binding.run {
+        val moveSearchToBookshelf = AppConfig.moveSearchToBookshelf
+        searchButtonContainer.isVisible = !moveSearchToBookshelf
+        sideSearchRow.isVisible = !moveSearchToBookshelf
+        ConstraintSet().apply {
+            clone(bottomControls)
+            clear(R.id.bottom_navigation_glass, ConstraintSet.END)
+            clear(R.id.bottom_navigation_glass, ConstraintSet.TOP)
+            clear(R.id.bottom_navigation_glass, ConstraintSet.BOTTOM)
+            if (moveSearchToBookshelf) {
+                connect(
+                    R.id.bottom_navigation_glass,
+                    ConstraintSet.END,
+                    ConstraintSet.PARENT_ID,
+                    ConstraintSet.END
+                )
+                connect(
+                    R.id.bottom_navigation_glass,
+                    ConstraintSet.TOP,
+                    ConstraintSet.PARENT_ID,
+                    ConstraintSet.TOP
+                )
+                connect(
+                    R.id.bottom_navigation_glass,
+                    ConstraintSet.BOTTOM,
+                    ConstraintSet.PARENT_ID,
+                    ConstraintSet.BOTTOM
+                )
+                setMargin(R.id.bottom_navigation_glass, ConstraintSet.END, 0)
+            } else {
+                connect(
+                    R.id.bottom_navigation_glass,
+                    ConstraintSet.END,
+                    R.id.search_button_container,
+                    ConstraintSet.START
+                )
+                connect(
+                    R.id.bottom_navigation_glass,
+                    ConstraintSet.TOP,
+                    R.id.search_button_container,
+                    ConstraintSet.TOP
+                )
+                connect(
+                    R.id.bottom_navigation_glass,
+                    ConstraintSet.BOTTOM,
+                    R.id.search_button_container,
+                    ConstraintSet.BOTTOM
+                )
+                setMargin(
+                    R.id.bottom_navigation_glass,
+                    ConstraintSet.END,
+                    resources.getDimensionPixelSize(R.dimen.main_bottom_bar_gap)
+                )
+            }
+            applyTo(bottomControls)
         }
     }
 
@@ -1661,6 +1721,10 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         }
         observeEvent<String>(PreferKey.threadCount) {
             viewModel.upPool()
+        }
+        observeEvent<Boolean>(PreferKey.moveSearchToBookshelf) {
+            applySearchPlacementPreference()
+            scheduleLiquidGlassSetup()
         }
     }
 

@@ -10,6 +10,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -17,6 +18,7 @@ import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.base.VMBaseFragment
 import io.legado.app.constant.AppLog
@@ -42,6 +44,7 @@ import io.legado.app.ui.rss.favorites.RssFavoritesActivity
 import io.legado.app.ui.rss.read.ReadRssActivity
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.rss.source.manage.RssSourceActivity
+import io.legado.app.ui.widget.RoundedTagBarView
 import io.legado.app.utils.applyMainBottomBarPadding
 import io.legado.app.utils.applyStatusBarPadding
 import io.legado.app.utils.applyTint
@@ -403,7 +406,7 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
             return
         }
 
-        val sorts = kotlin.runCatching { source.sortUrls() }
+        val sorts = runCatching { source.sortUrls() }
             .getOrElse {
                 AppLog.put("订阅界面加载分类失败\n${it.localizedMessage}", it)
                 listOf(Pair("", source.sourceUrl))
@@ -416,7 +419,7 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
         if (visibleTags.size > 1 || (currentSorts.size == 1 && currentSorts.first().first.isNotBlank())) {
             binding.rvRssTags.visible()
             binding.rvRssTags.submitItems(
-                currentSorts.map { io.legado.app.ui.widget.RoundedTagBarView.Item(it.first) },
+                currentSorts.map { RoundedTagBarView.Item(it.first) },
                 selectedTagIndex.coerceIn(0, currentSorts.lastIndex)
             )
         } else {
@@ -463,9 +466,9 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
         binding.rssFragmentContainer.gone()
         binding.rssWebContainer.visible()
         val webView = rssWebView ?: WebView(requireContext()).also { created ->
-            created.layoutParams = android.widget.FrameLayout.LayoutParams(
-                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+            created.layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
             )
             created.overScrollMode = View.OVER_SCROLL_NEVER
             created.settings.javaScriptEnabled = true
@@ -577,6 +580,7 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
             searchTexts = {
                 listOfNotNull(it.sourceName, it.sourceUrl, it.sourceGroup)
             },
+            searchHint = getString(R.string.screen),
             itemKey = { it.sourceUrl }
         ) {
             if (it.canRenderInModernPage()) {
@@ -621,7 +625,7 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
             }
         } else {
             viewModel.launchRssWithHtml(rssSource, {
-                startActivity<io.legado.app.ui.rss.article.RssSortActivity> {
+                startActivity<RssSortActivity> {
                     putExtra("sourceUrl", rssSource.sourceUrl)
                 }
             }) { html ->
@@ -675,7 +679,7 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
         }
         when (target) {
             is WebView -> target.scrollTo(0, 0)
-            is androidx.recyclerview.widget.RecyclerView -> target.scrollToPosition(0)
+            is RecyclerView -> target.scrollToPosition(0)
         }
     }
 }

@@ -6,7 +6,6 @@ import io.legado.app.constant.BookType
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.rule.ExploreKind
-import io.legado.app.model.Debug
 import io.legado.app.ui.main.explore.ExploreAdapter.Companion.exploreInfoMapList
 import io.legado.app.utils.ACache
 import io.legado.app.utils.GSON
@@ -104,7 +103,7 @@ suspend fun BookSource.exploreKinds(): List<ExploreKind> {
                     }
                     else -> exploreUrl
                 }
-                Debug.log("refgd", ruleStr)
+                
                 if (!ruleStr.isValidExploreKindsRule()) {
                     return@runCatching
                 }

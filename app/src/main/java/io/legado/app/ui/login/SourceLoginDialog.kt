@@ -382,6 +382,14 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
+        view.setOnTouchListener { _, event ->
+            val isOutsidePanel = !event.isInsideRoundedPanel(binding.vwBg)
+            if (isOutsidePanel && event.action == MotionEvent.ACTION_UP) {
+                dismiss()
+            }
+            isOutsidePanel
+        }
+        binding.vwBg.setOnClickListener { }
         val source = viewModel.source ?: return
         loginUrl = source.getLoginJs()
         val loginUiStr = source.loginUi ?: return
@@ -410,6 +418,34 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         binding.toolBar.applyUiToolbarTypeface(requireContext())
         binding.toolBar.inflateMenu(R.menu.source_login)
         binding.toolBar.menu.applyTint(requireContext())
+    }
+
+    private fun MotionEvent.isInsideRoundedPanel(panel: View): Boolean {
+        val location = IntArray(2)
+        panel.getLocationOnScreen(location)
+        val localX = rawX - location[0]
+        val localY = rawY - location[1]
+        val width = panel.width.toFloat()
+        val height = panel.height.toFloat()
+        if (localX < 0f || localY < 0f || localX > width || localY > height) {
+            return false
+        }
+        val radius = resources.getDimension(R.dimen.ui_panel_radius)
+            .coerceAtMost(width / 2f)
+            .coerceAtMost(height / 2f)
+        val centerX = when {
+            localX < radius -> radius
+            localX > width - radius -> width - radius
+            else -> localX
+        }
+        val centerY = when {
+            localY < radius -> radius
+            localY > height - radius -> height - radius
+            else -> localY
+        }
+        val dx = localX - centerX
+        val dy = localY - centerY
+        return dx * dx + dy * dy <= radius * radius
     }
 
     private fun handleButtonClick(source: BaseSource, action: String?, name: String, isLongClick: Boolean) {

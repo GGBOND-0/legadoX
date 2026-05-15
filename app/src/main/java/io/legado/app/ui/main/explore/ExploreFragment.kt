@@ -181,7 +181,10 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         binding.rvFind.clipToPadding = false
         binding.rvFind.applyMainBottomBarPadding()
         binding.rvDiscoverBooks.clipToPadding = false
-        binding.rvDiscoverBooks.applyMainBottomBarPadding(withInitialPadding = true)
+        binding.rvDiscoverBooks.applyMainBottomBarPadding(
+            withInitialPadding = true,
+            usePaddingForRecyclerView = true
+        )
         applyDiscoveryMode(loadData = false)
     }
 

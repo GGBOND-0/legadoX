@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.lib.theme.ThemeStore.Companion.accentColor
+import io.legado.app.lib.theme.uiTypeface
 import io.legado.app.utils.gone
 import io.legado.app.utils.visible
 
@@ -68,6 +69,7 @@ class ChapterAdapter(
 
         fun bind(chapter: BookChapter, isSelected: Boolean) {
             tvChapterName.text = chapter.title
+            tvChapterName.typeface = itemView.context.uiTypeface()
             tvChapterName.textSize = if (isVolume) 12f else if (isSelected) 14.5f else 13.5f
             if (isSelected) {
                 tvChapterName.setTextColor(accentColor)

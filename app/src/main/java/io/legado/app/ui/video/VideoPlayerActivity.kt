@@ -56,10 +56,12 @@ import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
 import io.legado.app.help.webView.WebJsExtensions.Companion.nameSource
 import io.legado.app.help.webView.WebViewPool
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.lib.theme.applyUiBodyTypefaceDeep
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.lib.theme.secondaryTextColor
+import io.legado.app.lib.theme.uiTypeface
 import io.legado.app.model.VideoPlay
 import io.legado.app.service.VideoPlayService
 import io.legado.app.ui.about.AppLogDialog
@@ -89,6 +91,7 @@ import io.legado.app.utils.observeEventSticky
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setHtml
+import io.legado.app.utils.setLightStatusBar
 import io.legado.app.utils.setMarkdown
 import io.legado.app.utils.setTintMutate
 import io.legado.app.utils.statusBarHeight
@@ -128,6 +131,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         initIntroView = true
         val inflater = LayoutInflater.from(this)
         val view = inflater.inflate(R.layout.view_book_intro, binding.tvIntroContainer, false) as ScrollTextView
+        view.typeface = uiTypeface()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             view.revealOnFocusHint = false
         }
@@ -203,6 +207,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
     @OptIn(UnstableApi::class)
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         binding.bottomPanelContainer.applyNavigationBarMargin(withInitialMargin = true)
+        applyVideoDetailTypeface()
         playerView.enlargeImageRes = R.drawable.ic_fullscreen
         isNew = intent.getBooleanExtra("isNew", true)
         setupPlayerView()
@@ -318,6 +323,24 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
         }
         if (!expanded) {
             updateCollapsedEpisodeText()
+        }
+        applyBottomPanelStatusBarStyle()
+    }
+
+    private fun applyVideoDetailTypeface() {
+        val typeface = uiTypeface()
+        binding.bottomPanelContainer.applyUiBodyTypefaceDeep(typeface)
+        binding.bottomPanelCollapsed.applyUiBodyTypefaceDeep(typeface)
+    }
+
+    private fun applyBottomPanelStatusBarStyle() {
+        if (isFullScreen) {
+            return
+        }
+        if (isBottomPanelExpanded) {
+            setupSystemBar()
+        } else {
+            setLightStatusBar(false)
         }
     }
 
@@ -763,6 +786,7 @@ class VideoPlayerActivity : VMBaseActivity<ActivityVideoPlayerBinding, VideoPlay
             }
             playerView.postDelayed({
                 playerView.backFromFull(this)
+                applyBottomPanelStatusBarStyle()
             }, if (VideoPlay.isPortraitVideo) 300 else 0)
             upView()
         }

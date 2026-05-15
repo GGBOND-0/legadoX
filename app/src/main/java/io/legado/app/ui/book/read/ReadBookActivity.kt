@@ -850,6 +850,7 @@ class ReadBookActivity : BaseReadBookActivity(),
         val startX = binding.textMenuPosition.x.toInt()
         val topY = binding.textMenuPosition.y.toInt()
         val endX = binding.cursorRight.x.toInt()
+        val startTextBottomY = binding.cursorLeft.y.toInt()
         val startBottomY = binding.cursorLeft.y.toInt() + binding.cursorLeft.height
         val endBottomY = binding.cursorRight.y.toInt() + binding.cursorRight.height
         val centerX = ((startX + endX) / 2f).toInt()
@@ -864,6 +865,7 @@ class ReadBookActivity : BaseReadBookActivity(),
             binding.root.height + navigationBarHeight,
             startX,
             topY,
+            startTextBottomY,
             startBottomY,
             endX,
             endBottomY

@@ -146,6 +146,7 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
         windowHeight: Int,
         startX: Int,
         startTopY: Int,
+        startTextBottomY: Int,
         startBottomY: Int,
         endX: Int,
         endBottomY: Int
@@ -168,16 +169,21 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
         val popupWidth = contentView.measuredWidth
         val popupHeight = contentView.measuredHeight
         val margin = 8.dpToPx()
-        val spaceAbove = startTopY
-        val spaceBelow = windowHeight - endBottomY
-        val showAbove = spaceAbove >= popupHeight + margin || spaceAbove > spaceBelow
+        val textHeight = (startTextBottomY - startTopY).coerceAtLeast(0)
+        val textTopY = (startTopY - textHeight).coerceAtLeast(0)
+        val selectionBottomY = maxOf(startBottomY, endBottomY)
+        val spaceAbove = textTopY
+        val spaceBelow = windowHeight - selectionBottomY
+        val showAbove = spaceAbove >= popupHeight + margin || (
+                spaceBelow < popupHeight + margin && spaceAbove > spaceBelow
+                )
         val preferredX = ((startX + endX) / 2f - popupWidth / 2f).toInt()
         val maxX = (view.width - popupWidth - margin).coerceAtLeast(margin)
         val x = preferredX.coerceIn(margin, maxX)
         val y = if (showAbove) {
-            (startTopY - popupHeight - margin).coerceAtLeast(margin)
+            (textTopY - popupHeight - margin).coerceAtLeast(margin)
         } else {
-            (endBottomY + margin).coerceAtMost((windowHeight - popupHeight - margin).coerceAtLeast(margin))
+            (selectionBottomY + margin).coerceAtMost((windowHeight - popupHeight - margin).coerceAtLeast(margin))
         }
         showAtLocation(view, Gravity.TOP or Gravity.START, x, y)
     }

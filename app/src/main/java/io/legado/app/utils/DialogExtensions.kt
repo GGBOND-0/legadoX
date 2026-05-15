@@ -6,11 +6,9 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.os.Build
 import android.view.Gravity
 import android.view.View
-import android.view.WindowInsets
-import android.view.WindowInsetsController
+import android.view.ViewGroup
 import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
@@ -149,6 +147,67 @@ fun DialogFragment.setLayout(width: Int, height: Int) {
 
 fun Dialog.setLayout(width: Int, height: Int) {
     window?.setLayout(resolveFloatingDialogWidth(width, height), height)
+}
+
+/**
+ * 全宽显示，高度随内容收缩，且不超过屏幕高度的 [maxHeightMix] 比例。
+ * 超出时限制 [scrollView] 高度以便内部滚动。
+ */
+fun DialogFragment.setLayoutWrapMaxHeight(
+    maxHeightMix: Float = 0.85f,
+    panelView: ViewGroup,
+    scrollView: View
+) {
+    dialog?.setLayoutWrapMaxHeight(maxHeightMix, panelView, scrollView)
+}
+
+fun Dialog.setLayoutWrapMaxHeight(
+    maxHeightMix: Float = 0.85f,
+    panelView: ViewGroup,
+    scrollView: View
+) {
+    val dm = context.windowManager.windowSize
+    val maxPanelHeight = (dm.heightPixels * maxHeightMix).toInt()
+    val root = panelView.parent as? View
+    fun apply() {
+        val rootPadV = root?.let { it.paddingTop + it.paddingBottom } ?: 0
+        val rootPadH = root?.let { it.paddingLeft + it.paddingRight } ?: 0
+        val panelWidth = (root?.width?.takeIf { it > 0 } ?: dm.widthPixels) - rootPadH
+        val widthSpec = View.MeasureSpec.makeMeasureSpec(panelWidth, View.MeasureSpec.EXACTLY)
+        val scrollLp = scrollView.layoutParams as ViewGroup.MarginLayoutParams
+        scrollLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+        scrollView.layoutParams = scrollLp
+        panelView.measure(
+            widthSpec,
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val naturalPanelHeight = panelView.measuredHeight
+        val maxContentHeight = maxPanelHeight - rootPadV
+        if (naturalPanelHeight > maxContentHeight) {
+            val toolbar = panelView.getChildAt(0)
+            toolbar?.measure(
+                widthSpec,
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
+            val toolbarHeight = toolbar?.measuredHeight ?: 0
+            scrollLp.height = (maxContentHeight - toolbarHeight).coerceAtLeast(0)
+            scrollView.layoutParams = scrollLp
+            panelView.measure(
+                widthSpec,
+                View.MeasureSpec.makeMeasureSpec(maxContentHeight, View.MeasureSpec.EXACTLY)
+            )
+        }
+        val dialogHeight = panelView.measuredHeight.coerceAtMost(maxContentHeight) + rootPadV
+        window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, dialogHeight)
+        window?.attributes = window?.attributes?.apply {
+            gravity = Gravity.CENTER
+        }
+    }
+    if (panelView.width > 0) {
+        apply()
+    } else {
+        panelView.post { apply() }
+    }
 }
 
 private fun Dialog.applyMaxWidthIfFloating() {

@@ -2,13 +2,14 @@ package io.legado.app.ui.login
 
 import android.annotation.SuppressLint
 import android.content.DialogInterface
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
-import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
+import android.view.WindowManager
 import androidx.core.view.setPadding
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -26,7 +27,6 @@ import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.widget.RowUiForm
-import io.legado.app.ui.widget.RowUiViewFactory
 import io.legado.app.utils.GSON
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.dpToPx
@@ -35,7 +35,7 @@ import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.sendToClip
-import io.legado.app.utils.setLayout
+import io.legado.app.utils.setLayoutWrapMaxHeight
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -219,7 +219,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     override fun onStart() {
         super.onStart()
-        setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        adjustLoginDialogSize()
     }
 
     suspend fun evalUiJs(jsStr: String): String? {
@@ -293,6 +293,11 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 }
             }
         )
+        adjustLoginDialogSize()
+    }
+
+    private fun adjustLoginDialogSize() {
+        setLayoutWrapMaxHeight(panelView = binding.vwBg, scrollView = binding.scrollLogin)
     }
 
     private fun buildLoginUiValues(
@@ -348,14 +353,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 }
             }
         }
-    }
-
-    private fun applyModernRowUiStyle(rowUi: RowUi, view: View) {
-        RowUiViewFactory.applyModernRowUiStyle(rowUi, view)
-    }
-
-    private fun applyModernTextButtonStyle(rowUi: RowUi, textView: TextView) {
-        RowUiViewFactory.applyModernTextButtonStyle(rowUi, textView)
     }
 
     private fun buttonUi(source: BaseSource, rowUis: List<RowUi>?) {

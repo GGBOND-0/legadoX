@@ -45,7 +45,11 @@ class RssViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    fun getSingleUrl(rssSource: RssSource, onSuccess: (url: String) -> Unit) {
+    fun getSingleUrl(
+        rssSource: RssSource,
+        onSuccess: (url: String) -> Unit,
+        onError: ((Throwable) -> Unit)? = null
+    ) {
         execute {
             var sortUrl = rssSource.sortUrl
             if (!sortUrl.isNullOrBlank()) {
@@ -75,11 +79,16 @@ class RssViewModel(application: Application) : BaseViewModel(application) {
             .onSuccess {
                 onSuccess.invoke(it)
             }.onError {
-                context.toastOnUi(it.localizedMessage)
+                onError?.invoke(it) ?: context.toastOnUi(it.localizedMessage)
             }
     }
 
-    fun  launchRssWithHtml(rssSource: RssSource, noStartHtml: () -> Unit, isStartHtml: (html: String) -> Unit) {
+    fun launchRssWithHtml(
+        rssSource: RssSource,
+        noStartHtml: () -> Unit,
+        isStartHtml: (html: String) -> Unit,
+        onError: ((Throwable) -> Unit)? = null
+    ) {
         execute {
             val startHtml = rssSource.startHtml ?: return@execute null
             return@execute when {
@@ -101,7 +110,7 @@ class RssViewModel(application: Application) : BaseViewModel(application) {
                     isStartHtml.invoke(it)
                 }
             }.onError {
-                context.toastOnUi(it.localizedMessage)
+                onError?.invoke(it) ?: context.toastOnUi(it.localizedMessage)
             }
     }
 

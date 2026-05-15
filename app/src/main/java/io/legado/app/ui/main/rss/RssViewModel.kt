@@ -6,6 +6,7 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssSource
 import io.legado.app.help.source.SourceHelp
+import io.legado.app.help.source.removeSortCache
 import io.legado.app.utils.toastOnUi
 
 class RssViewModel(application: Application) : BaseViewModel(application) {
@@ -42,6 +43,22 @@ class RssViewModel(application: Application) : BaseViewModel(application) {
         execute {
             rssSource.enabled = false
             appDb.rssSourceDao.update(rssSource)
+        }
+    }
+
+    fun clearArticles(sourceUrl: String, onFinally: () -> Unit) {
+        execute {
+            appDb.rssArticleDao.delete(sourceUrl)
+        }.onFinally {
+            onFinally.invoke()
+        }
+    }
+
+    fun clearSortCache(rssSource: RssSource, onFinally: () -> Unit) {
+        execute {
+            rssSource.removeSortCache()
+        }.onFinally {
+            onFinally.invoke()
         }
     }
 

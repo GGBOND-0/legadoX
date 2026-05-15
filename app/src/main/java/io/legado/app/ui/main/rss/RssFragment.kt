@@ -62,6 +62,7 @@ import io.legado.app.ui.rss.favorites.RssFavoritesActivity
 import io.legado.app.ui.rss.read.ReadRssActivity
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.rss.source.manage.RssSourceActivity
+import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.ui.widget.RoundedTagBarView
 import io.legado.app.utils.applyMainBottomBarPadding
 import io.legado.app.utils.applyStatusBarPadding
@@ -87,12 +88,13 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 订阅界面
  */
 class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainFragmentInterface,
-    RssAdapter.CallBack {
+    RssAdapter.CallBack, VariableDialog.Callback {
 
     constructor(position: Int) : this() {
         val bundle = Bundle()
@@ -135,6 +137,8 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
         const val MENU_RSS_REFRESH = 5
         const val MENU_RSS_OPEN_BROWSER = 6
         const val MENU_RSS_COPY_URL = 7
+        const val MENU_RSS_GROUP = 8
+        const val MENU_RSS_SOURCE_READ_RECORD = 9
     }
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
@@ -300,11 +304,32 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
         val source = selectedRssSource
         val webVisible = binding.rssWebContainer.isVisible
         PopupMenu(requireContext(), binding.btnRssMore).apply {
-            menu.add(Menu.NONE, MENU_RSS_FAVORITES, Menu.NONE, R.string.favorite)
-                .setIcon(R.drawable.ic_star)
-            if (source?.loginUrl?.isNotBlank() == true) {
-                menu.add(Menu.NONE, MENU_RSS_LOGIN, Menu.NONE, R.string.login)
-                    .setIcon(R.drawable.ic_bottom_person)
+            menu.add(Menu.NONE, R.id.menu_read_record, Menu.NONE, R.string.history)
+                .setIcon(R.drawable.ic_history)
+            // menu.add(Menu.NONE, MENU_RSS_FAVORITES, Menu.NONE, R.string.favorite)
+            //     .setIcon(R.drawable.ic_star)
+            // menu.addSubMenu(Menu.NONE, MENU_RSS_GROUP, Menu.NONE, R.string.group)
+            //     .apply {
+            //         item.setIcon(R.drawable.ic_groups)
+            //         groups.forEach {
+            //             add(R.id.menu_group_text, Menu.NONE, Menu.NONE, it)
+            //         }
+            //     }
+            // menu.add(Menu.NONE, R.id.menu_rss_config, Menu.NONE, R.string.setting)
+            //     .setIcon(R.drawable.ic_settings)
+            if (source != null) {
+                // menu.add(Menu.NONE, R.id.menu_edit, Menu.NONE, R.string.edit)
+                // menu.add(Menu.NONE, R.id.menu_top, Menu.NONE, R.string.to_top)
+                if (source.loginUrl?.isNotBlank() == true) {
+                    menu.add(Menu.NONE, MENU_RSS_LOGIN, Menu.NONE, R.string.login)
+                        .setIcon(R.drawable.ic_bottom_person)
+                }
+                // menu.add(Menu.NONE, R.id.menu_disable, Menu.NONE, R.string.disable_source)
+                // menu.add(Menu.NONE, R.id.menu_del, Menu.NONE, R.string.delete)
+                menu.add(Menu.NONE, R.id.menu_refresh_sort, Menu.NONE, R.string.refresh_sort)
+                menu.add(Menu.NONE, R.id.menu_set_source_variable, Menu.NONE, R.string.set_source_variable)
+                menu.add(Menu.NONE, MENU_RSS_SOURCE_READ_RECORD, Menu.NONE, R.string.read_record)
+                menu.add(Menu.NONE, R.id.menu_clear, Menu.NONE, R.string.clear)
             }
             if (source != null && !webVisible && !source.ruleArticles.isNullOrBlank()) {
                 menu.add(Menu.NONE, MENU_RSS_SWITCH_LAYOUT, Menu.NONE, R.string.switchLayout)
@@ -320,12 +345,44 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
             }
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
+                    R.id.menu_read_record -> {
+                        showDialogFragment<ReadRecordDialog>()
+                        true
+                    }
                     MENU_RSS_FAVORITES -> {
                         startActivity<RssFavoritesActivity>()
                         true
                     }
+                    R.id.menu_rss_config -> {
+                        startActivity<RssSourceActivity>()
+                        true
+                    }
+                    R.id.menu_edit -> {
+                        source?.let(::edit)
+                        true
+                    }
+                    R.id.menu_top -> {
+                        source?.let(::toTop)
+                        true
+                    }
                     MENU_RSS_LOGIN -> {
-                        selectedRssSource?.let(::openRssLogin)
+                        source?.let(::openRssLogin)
+                        true
+                    }
+                    R.id.menu_disable -> {
+                        source?.let(::disable)
+                        true
+                    }
+                    R.id.menu_del -> {
+                        source?.let(::del)
+                        true
+                    }
+                    R.id.menu_refresh_sort -> {
+                        source?.let(::refreshRssSortCache)
+                        true
+                    }
+                    R.id.menu_set_source_variable -> {
+                        source?.let(::setSourceVariable)
                         true
                     }
                     MENU_RSS_SWITCH_LAYOUT -> {
@@ -344,10 +401,52 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
                         currentWebUrl()?.let { requireContext().sendToClip(it) }
                         true
                     }
-                    else -> false
+                    MENU_RSS_SOURCE_READ_RECORD -> {
+                        showDialogFragment(ReadRecordDialog(source?.sourceUrl))
+                        true
+                    }
+                    R.id.menu_clear -> {
+                        source?.let(::clearRssArticles)
+                        true
+                    }
+                    else -> if (item.groupId == R.id.menu_group_text) {
+                        searchView.setQuery("group:${item.title}", true)
+                        true
+                    } else {
+                        false
+                    }
                 }
             }
             show()
+        }
+    }
+
+    private fun refreshRssSortCache(source: RssSource) {
+        viewModel.clearSortCache(source) {
+            refreshCurrentRssContent(forceWebRefresh = true)
+        }
+    }
+
+    private fun clearRssArticles(source: RssSource) {
+        viewModel.clearArticles(source.sourceUrl) {
+            refreshCurrentRssContent(forceWebRefresh = true)
+        }
+    }
+
+    private fun setSourceVariable(source: RssSource) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val comment = source.getDisplayVariableComment(
+                "Source variables can be accessed in js through source.getVariable()"
+            )
+            val variable = withContext(IO) { source.getVariable() }
+            showDialogFragment(
+                VariableDialog(
+                    getString(R.string.set_source_variable),
+                    source.getKey(),
+                    variable,
+                    comment
+                )
+            )
         }
     }
 
@@ -1006,6 +1105,12 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
 
     override fun disable(rssSource: RssSource) {
         viewModel.disable(rssSource)
+    }
+
+    override fun setVariable(key: String, variable: String?) {
+        (selectedRssSource?.takeIf { it.getKey() == key }
+            ?: rssSources.firstOrNull { it.getKey() == key })
+            ?.setVariable(variable)
     }
 
     fun gotoTop() {

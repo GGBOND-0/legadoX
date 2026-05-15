@@ -82,6 +82,7 @@ class BgTextConfigDialog : BaseDialogFragment(R.layout.dialog_read_bg_text) {
         const val TEXT_COLOR = 121
         const val BG_COLOR = 122
         const val TEXT_ACCENT_COLOR = 123
+        const val READ_MENU_BG_COLOR = 124
     }
 
     private val binding by viewBinding(DialogReadBgTextBinding::bind)

@@ -102,5 +102,5 @@ interface AlertBuilder<out D : DialogInterface> {
         positiveButton(R.string.yes, handler)
 
     fun noButton(handler: ((dialog: DialogInterface) -> Unit)? = null) =
-        negativeButton(R.string.no, handler)
+        neutralButton(R.string.no, handler)
 }

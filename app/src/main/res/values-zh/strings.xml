@@ -756,9 +756,9 @@
     <string name="source_auto_changing">正在自动换源</string>
     <string name="click_to_apply">点击加入</string>
     <string name="middle">中</string>
-    <string name="information">信息</string>
+    <string name="information">标题/页眉/页脚</string>
     <string name="switchLayout">切换布局</string>
-    <string name="text_font_weight_converter">文章字重切换</string>
+    <string name="text_font_weight_converter">字重</string>
     <string name="full_screen_gestures_support">全面屏手势优化</string>
     <string name="disable_return_key">禁用返回键</string>
 
@@ -1180,7 +1180,8 @@
     <string name="tag_explore_disabled">标志:发现已禁用</string>
     <string name="show_read_title_addition">展示顶部工具栏附加区域</string>
     <string name="read_bar_style_follow_page">工具栏样式跟随页面</string>
-    <string name="read_menu_alpha">正文菜单不透明度</string>
+    <string name="read_menu_bg">底部面板背景</string>
+    <string name="read_menu_alpha">底部面板不透明度</string>
     <string name="read_menu_alpha_summary">调整顶部与底部正文菜单的不透明程度</string>
     <string name="page_animation_speed_title">触摸翻页动画速度</string>
     <string name="page_animation_speed_dialog_title">触摸翻页动画时长（毫秒）</string>
@@ -1358,6 +1359,7 @@
     <string name="manga_color_filter">滤镜</string>
     <string name="hide_manga_title">隐藏漫画列表标题</string>
     <string name="refresh_explore">刷新发现</string>
+    <string name="reload_book_source">重载书源</string>
     <string name="padding_display_cutouts">填充刘海区域</string>
     <string name="read_aloud_pause_resume">朗读暂停/继续</string>
     <string name="manga_epaper">墨水屏</string>
@@ -1492,6 +1494,7 @@
     <string name="ai_read_clear_history_confirm">清空本书全部问 AI 历史？</string>
     <string name="ai_chat_thinking_collapsed">正在思考，点按展开</string>
     <string name="ai_chat_thinking_done">思考完成，点按展开</string>
+    <string name="select">选择</string>
     <string name="expand">展开</string>
     <string name="collapse">收起</string>
     <string name="config_category_content">内容与规则</string>

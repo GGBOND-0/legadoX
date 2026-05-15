@@ -635,6 +635,17 @@ class ExploreAdapter(context: Context, val callBack: CallBack) :
         }
     }
 
+    fun reloadExplore() {
+        val sources = getItems()
+        sourceKinds.clear()
+        callBack.scope.launch {
+            withContext(IO) {
+                sources.forEach { it.clearExploreKindsCache() }
+            }
+            notifyDataSetChanged()
+        }
+    }
+
     private fun refreshExplore(source: BookSourcePart, position: Int, binding: ItemFindBookBinding) {
         binding.rotateLoading.visible()
         Coroutine.async(callBack.scope) {

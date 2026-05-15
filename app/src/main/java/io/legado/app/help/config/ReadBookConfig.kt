@@ -69,7 +69,7 @@ object ReadBookConfig {
 
     @Synchronized
     fun getConfig(index: Int): Config {
-        if (configList.size < 5) {
+        if (configList.isEmpty()) {
             resetAll()
         }
         return configList.getOrNull(index) ?: configList[0]
@@ -154,18 +154,25 @@ object ReadBookConfig {
     }
 
     fun deleteDur(): Boolean {
-        if (configList.size > 5) {
-            val removeIndex = styleSelect
-            configList.removeAt(removeIndex)
-            if (removeIndex <= readStyleSelect) {
-                readStyleSelect -= 1
-            }
-            if (removeIndex <= comicStyleSelect) {
-                comicStyleSelect -= 1
-            }
-            return true
+        return deleteAt(styleSelect)
+    }
+
+    fun deleteAt(index: Int): Boolean {
+        if (configList.size <= 1 || index !in configList.indices) {
+            return false
         }
-        return false
+        configList.removeAt(index)
+        if (index < readStyleSelect) {
+            readStyleSelect -= 1
+        } else if (index == readStyleSelect) {
+            readStyleSelect = readStyleSelect.coerceAtMost(configList.lastIndex)
+        }
+        if (index < comicStyleSelect) {
+            comicStyleSelect -= 1
+        } else if (index == comicStyleSelect) {
+            comicStyleSelect = comicStyleSelect.coerceAtMost(configList.lastIndex)
+        }
+        return true
     }
 
     fun clearBgAndCache() {
@@ -230,12 +237,16 @@ object ReadBookConfig {
                 appCtx.putPrefInt(PreferKey.comicStyleSelect, value)
             }
         }
-    var shareLayout = appCtx.getPrefBoolean(PreferKey.shareLayout)
+    // var shareLayout = appCtx.getPrefBoolean(PreferKey.shareLayout)
+    //     set(value) {
+    //         field = value
+    //         if (appCtx.getPrefBoolean(PreferKey.shareLayout) != value) {
+    //             appCtx.putPrefBoolean(PreferKey.shareLayout, value)
+    //         }
+    //     }
+    var shareLayout = false
         set(value) {
-            field = value
-            if (appCtx.getPrefBoolean(PreferKey.shareLayout) != value) {
-                appCtx.putPrefBoolean(PreferKey.shareLayout, value)
-            }
+            field = false
         }
 
     /**
@@ -571,6 +582,10 @@ object ReadBookConfig {
         private var textAccentColor: String = "#E53935",//白天强调文字颜色
         private var textAccentColorNight: String = "#FE4D55",//夜间强调文字颜色
         private var textAccentColorEInk: String = "#000000",
+        private var readMenuBgColor: String? = "",
+        private var readMenuBgColorNight: String? = "",
+        private var readMenuBgColorEInk: String? = "",
+        var readMenuAlpha: Int = 100,
         private var readScrollFollowBackground: Boolean = false,
         private var readScrollFollowBackgroundNight: Boolean = false,
         private var readScrollFollowBackgroundEInk: Boolean = false,
@@ -652,6 +667,31 @@ object ReadBookConfig {
             textAccentColorIntNight = textAccentColorNight.toColorInt()
             textAccentColorInt = textAccentColor.toColorInt()
             initAccentColorInt = true
+        }
+
+        fun setCurReadMenuBgColor(color: Int) {
+            when {
+                AppConfig.isEInkMode -> readMenuBgColorEInk = "#${color.hexString}"
+                AppConfig.isNightTheme -> readMenuBgColorNight = "#${color.hexString}"
+                else -> readMenuBgColor = "#${color.hexString}"
+            }
+        }
+
+        fun clearCurReadMenuBgColor() {
+            when {
+                AppConfig.isEInkMode -> readMenuBgColorEInk = ""
+                AppConfig.isNightTheme -> readMenuBgColorNight = ""
+                else -> readMenuBgColor = ""
+            }
+        }
+
+        fun curReadMenuBgColor(): Int? {
+            val color = when {
+                AppConfig.isEInkMode -> readMenuBgColorEInk
+                AppConfig.isNightTheme -> readMenuBgColorNight
+                else -> readMenuBgColor
+            }
+            return color?.takeIf { it.isNotBlank() }?.toColorInt()
         }
 
         fun setCurTextColor(color: Int) {
@@ -882,6 +922,10 @@ object ReadBookConfig {
             "textAccentColor" to textAccentColor,
             "textAccentColorNight" to textAccentColorNight,
             "textAccentColorEInk" to textAccentColorEInk,
+            "readMenuBgColor" to readMenuBgColor.orEmpty(),
+            "readMenuBgColorNight" to readMenuBgColorNight.orEmpty(),
+            "readMenuBgColorEInk" to readMenuBgColorEInk.orEmpty(),
+            "readMenuAlpha" to readMenuAlpha,
             "readScrollFollowBackground" to readScrollFollowBackground,
             "readScrollFollowBackgroundNight" to readScrollFollowBackgroundNight,
             "readScrollFollowBackgroundEInk" to readScrollFollowBackgroundEInk,

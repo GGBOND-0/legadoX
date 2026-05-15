@@ -101,15 +101,14 @@ class SearchMenu @JvmOverloads constructor(
             if (isBgLight) dividerColor else textColor,
             if (isBgLight) 1f else 0.14f
         )
-        val menuOpacity = (AppConfig.readMenuAlpha / 100f).coerceIn(0.35f, 1f)
         llBottomMenu.background = GradientDrawable().apply {
             cornerRadius = UiCorner.scaledDp(18F)
-            setColor(ColorUtils.withAlpha(panelBaseColor, menuOpacity))
+            setColor(panelBaseColor)
             setStroke(1.dpToPx(), panelStrokeColor)
         }
         llSearchBaseInfo.background = GradientDrawable().apply {
             cornerRadius = UiCorner.searchRadius(14F)
-            setColor(ColorUtils.withAlpha(panelInnerColor, menuOpacity))
+            setColor(panelInnerColor)
             setStroke(1.dpToPx(), panelStrokeColor)
         }
         tvCurrentSearchInfo.setTextColor(textColor)

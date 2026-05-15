@@ -5,14 +5,14 @@ import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
 import android.util.AttributeSet
+import android.widget.TextView
 import io.legado.app.R
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.accentColor
-import io.legado.app.ui.widget.text.StrokeTextView
 
 
-class ChineseConverter(context: Context, attrs: AttributeSet?) : StrokeTextView(context, attrs) {
+class ChineseConverter(context: Context, attrs: AttributeSet?) : TextView(context, attrs) {
 
     private val spannableString = SpannableString("简/繁")
     private var enabledSpan: ForegroundColorSpan = ForegroundColorSpan(context.accentColor)

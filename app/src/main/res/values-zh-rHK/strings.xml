@@ -693,7 +693,7 @@
     <string name="source_auto_changing">正在自動換源</string>
     <string name="click_to_apply">點擊加入</string>
     <string name="middle">中</string>
-    <string name="information">信息</string>
+    <string name="information">標題/頁首/頁尾</string>
     <string name="switchLayout">切換佈局</string>
     <string name="full_screen_gestures_support">全面屏手勢優化</string>
     <string name="disable_return_key">禁用返回鍵</string>
@@ -717,7 +717,7 @@
     <string name="text_full_justify">文字兩端對齊</string>
     <string name="auto_page_speed">自動翻頁速度</string>
     <string name="sort_by_url">地址排序</string>
-    <string name="text_font_weight_converter">文章字體轉換</string>
+    <string name="text_font_weight_converter">文章字體</string>
     <string name="select_backup_path">請選擇備份路徑</string>
     <string name="other">其它</string>
     <string name="official_account">legado-top</string>
@@ -1208,6 +1208,7 @@
     <string name="manga_color_filter">滤镜</string>
     <string name="hide_manga_title">隐藏漫画列表标题</string>
     <string name="refresh_explore">刷新发现</string>
+    <string name="reload_book_source">重載書源</string>
     <string name="padding_display_cutouts">填充刘海区域</string>
     <string name="read_aloud_pause_resume">朗讀暫停/繼續</string>
     <string name="manga_epaper">墨水屏</string>

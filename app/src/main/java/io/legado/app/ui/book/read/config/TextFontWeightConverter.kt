@@ -5,15 +5,15 @@ import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
 import android.util.AttributeSet
+import android.widget.TextView
 import io.legado.app.R
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.accentColor
-import io.legado.app.ui.widget.text.StrokeTextView
 
 
 class TextFontWeightConverter(context: Context, attrs: AttributeSet?) :
-    StrokeTextView(context, attrs) {
+    TextView(context, attrs) {
 
     private val spannableString = SpannableString(context.getString(R.string.font_weight_text))
     private var enabledSpan: ForegroundColorSpan = ForegroundColorSpan(context.accentColor)

@@ -59,24 +59,30 @@ fun Dialog.applyAdaptiveDim() {
     )
     if (isLightBackground) return
     val activity = context.findActivity() ?: return
-    window?.run {
-        clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-        val attr = attributes
-        attr.dimAmount = 0f
-        attributes = attr
-    }
     val activityDecor = activity.window.decorView
     val dimForeground = ColorDrawable(ColorUtils.withAlpha(Color.WHITE, NIGHT_DIALOG_DIM_ALPHA))
+    val dialogDecor = window?.decorView ?: return
     fun addOverlay() {
+        val dialogWindow = window ?: return
+        val attr = dialogWindow.attributes
+        val hasWindowDim = attr.flags and WindowManager.LayoutParams.FLAG_DIM_BEHIND != 0
+        if (!hasWindowDim || attr.dimAmount <= 0f) {
+            return
+        }
+        dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        attr.dimAmount = 0f
+        dialogWindow.attributes = attr
         dimForeground.setBounds(0, 0, activityDecor.width, activityDecor.height)
         activityDecor.overlay.add(dimForeground)
     }
-    if (activityDecor.width > 0 && activityDecor.height > 0) {
-        addOverlay()
-    } else {
-        activityDecor.post { addOverlay() }
+    dialogDecor.post {
+        if (activityDecor.width > 0 && activityDecor.height > 0) {
+            addOverlay()
+        } else {
+            activityDecor.post { addOverlay() }
+        }
     }
-    window?.decorView?.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+    dialogDecor.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
         override fun onViewAttachedToWindow(v: View) = Unit
 
         override fun onViewDetachedFromWindow(v: View) {

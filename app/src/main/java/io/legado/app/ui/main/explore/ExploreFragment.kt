@@ -1,15 +1,27 @@
 package io.legado.app.ui.main.explore
 
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.text.TextUtils
+import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.PopupWindow
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.Space
+import android.widget.TextView
 import android.view.SubMenu
 import android.view.View
+import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
+import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -36,6 +48,8 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.lib.theme.UiCorner
+import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.applyUiTitleTypeface
 import io.legado.app.lib.theme.primaryColor
@@ -143,6 +157,7 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     private companion object {
         const val MENU_DISCOVER_LOGIN = 1
         const val MENU_DISCOVER_SWITCH_LAYOUT = 2
+        const val MENU_DISCOVER_RELOAD_SOURCE = 3
         const val DISCOVER_LAYOUT_COUNT = 3
     }
 
@@ -247,9 +262,10 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         discoverPage = 1
         discoverBooks.clear()
         discoverBookAdapter.clearItems()
-        binding.rvDiscoverSelects.gone()
+        binding.llDiscoverSelectsBar.gone()
         binding.rvDiscoverSelects.submitItems(emptyList(), -1)
         binding.rvDiscoverTags.submitItems(emptyList(), -1)
+        binding.btnDiscoverTagsExpand.gone()
         binding.tvDiscoverEmpty.gone()
     }
 
@@ -406,6 +422,12 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
             selectedDiscoverMajorGroup = group
             applyDiscoverTagFilterAndSelect(preferredUrl = discoverCurrentUrl)
         }
+        binding.btnDiscoverTagsExpand.setOnClickListener {
+            showDiscoverTagsSelector()
+        }
+        binding.btnDiscoverSelectsExpand.setOnClickListener {
+            showDiscoverMajorGroupsSelector()
+        }
         applyDiscoverBookLayout()
         binding.rvDiscoverBooks.adapter = discoverBookAdapter
         binding.rvDiscoverBooks.setEdgeEffectColor(primaryColor)
@@ -477,11 +499,14 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     private fun showDiscoverMoreMenu() {
         PopupMenu(requireContext(), binding.btnDiscoverMore).apply {
             menu.add(Menu.NONE, MENU_DISCOVER_LOGIN, Menu.NONE, R.string.login).apply {
-                isEnabled = selectedDiscoverSourcePart?.hasLoginUrl == true
+                isVisible = selectedDiscoverSourcePart?.hasLoginUrl == true
                 setIcon(R.drawable.ic_bottom_person)
             }
             menu.add(Menu.NONE, MENU_DISCOVER_SWITCH_LAYOUT, Menu.NONE, R.string.switchLayout).apply {
                 setIcon(R.drawable.ic_view_quilt)
+            }
+            menu.add(Menu.NONE, MENU_DISCOVER_RELOAD_SOURCE, Menu.NONE, R.string.reload_book_source).apply {
+                setIcon(R.drawable.ic_refresh_black_24dp)
             }
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -491,6 +516,10 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
                     }
                     MENU_DISCOVER_SWITCH_LAYOUT -> {
                         switchDiscoverBookLayout()
+                        true
+                    }
+                    MENU_DISCOVER_RELOAD_SOURCE -> {
+                        reloadDiscoverSource()
                         true
                     }
                     else -> false
@@ -514,6 +543,50 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
             else -> LinearLayoutManager(requireContext())
         }
         discoverBookAdapter.notifyDataSetChanged()
+    }
+
+    private fun reloadDiscoverSource() {
+        val sourcePart = selectedDiscoverSourcePart ?: return
+        tagFilterPopup?.dismiss()
+        tagFilterPopup = null
+        discoverSourceVersion += 1
+        val currentSourceVersion = discoverSourceVersion
+        discoverRequestVersion += 1
+        discoverActionJob?.cancel()
+        discoverLoadJob?.cancel()
+        discoverLoadJob = null
+        discoverLoading = false
+        clearDiscoverLoading()
+        resetExplore()
+        discoverAllTagItems.clear()
+        discoverMajorGroups.clear()
+        discoverSettingItems.clear()
+        selectedDiscoverMajorGroup = null
+        renderDiscoverMajorGroups()
+        updateDiscoverTagFilterButtonState()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val loadingGeneration = showDiscoverLoading()
+            try {
+                val fullSource = withContext(IO) {
+                    appDb.bookSourceDao.getBookSource(sourcePart.bookSourceUrl)?.also {
+                        it.clearExploreKindsCache()
+                    }
+                }
+                if (!isAdded || currentSourceVersion != discoverSourceVersion) {
+                    return@launch
+                }
+                selectedDiscoverSource = fullSource
+                updateDiscoverSourceTitle()
+                updateDiscoverLoginButtonState()
+                updateDiscoverSearchButtonState()
+                loadDiscoverKindsAndDefault()
+            } finally {
+                if (isAdded && currentSourceVersion == discoverSourceVersion) {
+                    hideDiscoverLoading(loadingGeneration)
+                    binding.swipeRefreshLayout.isRefreshing = false
+                }
+            }
+        }
     }
 
     private fun updateDiscoverSearchButtonState() {
@@ -935,21 +1008,209 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
             items.map { RoundedTagBarView.Item(it.text, if (it.isButton) 0.9f else 1f, showFullText = true) },
             selectedDiscoverTagIndex
         )
+        binding.btnDiscoverTagsExpand.isVisible = items.size >= 9
     }
 
     private fun renderDiscoverMajorGroups() {
         discoverSelectItems.clear()
         if (discoverMajorGroups.isEmpty()) {
-            binding.rvDiscoverSelects.gone()
+            binding.llDiscoverSelectsBar.gone()
             binding.rvDiscoverSelects.submitItems(emptyList(), -1)
             return
         }
-        binding.rvDiscoverSelects.visible()
+        binding.llDiscoverSelectsBar.visible()
         binding.rvDiscoverSelects.submitItems(
             discoverMajorGroups.map { RoundedTagBarView.Item(it, 1f, showFullText = true) },
             discoverMajorGroups.indexOf(selectedDiscoverMajorGroup)
         )
+        binding.btnDiscoverSelectsExpand.isVisible = discoverMajorGroups.size >= 9
     }
+
+    private fun showDiscoverTagsSelector() {
+        if (discoverTagItems.size < 9) return
+        showDiscoverTagGridDialog(
+            title = getString(R.string.select),
+            items = discoverTagItems.mapIndexed { index, item ->
+                DiscoverGridItem(
+                    text = item.text,
+                    selected = index == selectedDiscoverTagIndex,
+                    value = index
+                )
+            }
+        ) { index ->
+            val item = discoverTagItems.getOrNull(index) ?: return@showDiscoverTagGridDialog
+            if (item.isButton) {
+                handleDiscoverButtonTag(item)
+                return@showDiscoverTagGridDialog
+            }
+            selectDiscoverTag(index, item, selectTab = true)
+        }
+    }
+
+    private fun showDiscoverMajorGroupsSelector() {
+        if (discoverMajorGroups.size < 9) return
+        val selectedIndex = discoverMajorGroups.indexOf(selectedDiscoverMajorGroup)
+        showDiscoverTagGridDialog(
+            title = getString(R.string.select),
+            items = discoverMajorGroups.mapIndexed { index, group ->
+                DiscoverGridItem(
+                    text = group,
+                    selected = index == selectedIndex,
+                    value = index
+                )
+            }
+        ) { index ->
+            val group = discoverMajorGroups.getOrNull(index) ?: return@showDiscoverTagGridDialog
+            selectedDiscoverMajorGroup = group
+            applyDiscoverTagFilterAndSelect(preferredUrl = discoverCurrentUrl)
+        }
+    }
+
+    private fun showDiscoverTagGridDialog(
+        title: CharSequence,
+        items: List<DiscoverGridItem>,
+        onSelected: (Int) -> Unit
+    ) {
+        val context = requireContext()
+        val root = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.bg_book_info_intro_panel)
+            clipToOutline = true
+        }
+        val titleView = TextView(context).apply {
+            text = title
+            applyUiTitleTypeface(context)
+            setTextColor(context.primaryTextColor)
+            textSize = 18f
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(16.dpToPx(), 0, 16.dpToPx(), 0)
+            setBackgroundColor(context.primaryColor)
+        }
+        root.addView(
+            titleView,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                48.dpToPx()
+            )
+        )
+        val content = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12.dpToPx(), 10.dpToPx(), 12.dpToPx(), 12.dpToPx())
+            applyUiBodyTypeface(context)
+        }
+        var dialog: AlertDialog? = null
+        var row = createDiscoverGridRow(context)
+        var usedSpan = 0
+        fun addRowIfNeeded() {
+            if (row.childCount > 0) {
+                if (usedSpan < 3) {
+                    row.addView(Space(context), LinearLayout.LayoutParams(0, 1, (3 - usedSpan).toFloat()))
+                }
+                content.addView(row)
+            }
+            row = createDiscoverGridRow(context)
+            usedSpan = 0
+        }
+        items.forEach { item ->
+            val span = discoverGridSpan(item.text)
+            if (usedSpan > 0 && usedSpan + span > 3) {
+                addRowIfNeeded()
+            }
+            val itemView = createDiscoverGridItemView(item, span).apply {
+                setOnClickListener {
+                    dialog?.dismiss()
+                    onSelected(item.value)
+                }
+            }
+            row.addView(
+                itemView,
+                LinearLayout.LayoutParams(
+                    0,
+                    if (span == 3) LinearLayout.LayoutParams.WRAP_CONTENT else 44.dpToPx(),
+                    span.toFloat()
+                ).apply {
+                    setMargins(4.dpToPx(), 6.dpToPx(), 4.dpToPx(), 6.dpToPx())
+                }
+            )
+            usedSpan += span
+            if (usedSpan == 3) {
+                addRowIfNeeded()
+            }
+        }
+        addRowIfNeeded()
+        root.addView(
+            ScrollView(context).apply { addView(content) },
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+        val dialogView = android.widget.FrameLayout(context).apply {
+            setPadding(16.dpToPx(), 16.dpToPx(), 16.dpToPx(), 16.dpToPx())
+            addView(
+                root,
+                android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+                )
+            )
+            applyUiBodyTypeface(context)
+        }
+        dialog = AlertDialog.Builder(context)
+            .setView(dialogView)
+            .show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+    }
+
+    private fun createDiscoverGridRow(context: android.content.Context): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+    }
+
+    private fun createDiscoverGridItemView(item: DiscoverGridItem, span: Int): TextView {
+        val context = requireContext()
+        return TextView(context).apply {
+            text = item.text
+            applyUiBodyTypeface(context)
+            isSelected = item.selected
+            minHeight = 44.dpToPx()
+            includeFontPadding = false
+            gravity = Gravity.CENTER
+            textSize = 14f
+            setPadding(14.dpToPx(), 8.dpToPx(), 14.dpToPx(), 8.dpToPx())
+            maxLines = if (span == 3) Int.MAX_VALUE else 1
+            ellipsize = if (span == 3) null else TextUtils.TruncateAt.END
+            setTextColor(
+                ColorStateList(
+                    arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()),
+                    intArrayOf(context.accentColor, context.primaryTextColor)
+                )
+            )
+            background = UiCorner.actionSelector(
+                Color.TRANSPARENT,
+                ContextCompat.getColor(context, R.color.background_card),
+                UiCorner.actionRadius(context)
+            )
+        }
+    }
+
+    private fun discoverGridSpan(text: CharSequence): Int {
+        val count = text.toString().let { it.codePointCount(0, it.length) }
+        return when {
+            count > 8 -> 3
+            count > 4 -> 2
+            else -> 1
+        }
+    }
+
+    private data class DiscoverGridItem(
+        val text: CharSequence,
+        val selected: Boolean,
+        val value: Int
+    )
 
     private fun currentDiscoverSelectValue(item: DiscoverTagItem): String {
         val source = selectedDiscoverSource ?: return item.kind.default ?: ""
@@ -1350,6 +1611,11 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     override fun onCompatOptionsItemSelected(item: MenuItem) {
         super.onCompatOptionsItemSelected(item)
         if (usingModernDiscovery) return
+        if (item.itemId == R.id.menu_reload_book_source) {
+            adapter.reloadExplore()
+            upExploreData(searchView?.query?.toString())
+            return
+        }
         if (item.groupId == R.id.menu_group_text) {
             searchView?.setQuery("group:${item.title}", true) ?: upExploreData("group:${item.title}")
         }

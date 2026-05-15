@@ -133,18 +133,62 @@
 
                 </LinearLayout>
 
-                <io.legado.app.ui.widget.RoundedTagBarView
-                    android:id="@+id/rv_discover_selects"
+                <LinearLayout
+                    android:id="@+id/ll_discover_selects_bar"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/bookshelf_tag_bar_height"
                     android:layout_marginTop="@dimen/bookshelf_tag_bar_margin_top"
-                    android:visibility="gone" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
 
-                <io.legado.app.ui.widget.RoundedTagBarView
-                    android:id="@+id/rv_discover_tags"
+                    <io.legado.app.ui.widget.RoundedTagBarView
+                        android:id="@+id/rv_discover_selects"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1" />
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btn_discover_selects_expand"
+                        android:layout_width="@dimen/bookshelf_action_button_size"
+                        android:layout_height="@dimen/bookshelf_action_button_size"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_discover_embedded_action"
+                        android:contentDescription="@string/expand"
+                        android:padding="@dimen/bookshelf_action_button_padding"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/ic_arrow_drop_down"
+                        android:tint="@color/primaryText" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/ll_discover_tags_bar"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/bookshelf_tag_bar_height"
-                    android:layout_marginTop="@dimen/bookshelf_tag_bar_margin_top" />
+                    android:layout_marginTop="@dimen/bookshelf_tag_bar_margin_top"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <io.legado.app.ui.widget.RoundedTagBarView
+                        android:id="@+id/rv_discover_tags"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1" />
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btn_discover_tags_expand"
+                        android:layout_width="@dimen/bookshelf_action_button_size"
+                        android:layout_height="@dimen/bookshelf_action_button_size"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_discover_embedded_action"
+                        android:contentDescription="@string/expand"
+                        android:padding="@dimen/bookshelf_action_button_padding"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/ic_arrow_drop_down"
+                        android:tint="@color/primaryText" />
+
+                </LinearLayout>
 
                 <FrameLayout
                     android:id="@+id/fl_discover_books"

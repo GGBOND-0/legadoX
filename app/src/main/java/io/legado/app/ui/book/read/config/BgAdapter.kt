@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.read.config
 
 import android.content.Context
+import android.graphics.drawable.GradientDrawable
 import android.view.ViewGroup
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
@@ -8,10 +9,17 @@ import io.legado.app.constant.EventBus
 import io.legado.app.databinding.ItemBgImageBinding
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.glide.ImageLoader
+import io.legado.app.lib.theme.accentColor
+import io.legado.app.lib.theme.UiCorner
+import io.legado.app.utils.dpToPx
 import io.legado.app.utils.postEvent
 import java.io.File
 
-class BgAdapter(context: Context, val textColor: Int) :
+class BgAdapter(
+    context: Context,
+    val textColor: Int,
+    private val onSelected: (() -> Unit)? = null
+) :
     RecyclerAdapter<String, ItemBgImageBinding>(context) {
 
     override fun getViewBinding(parent: ViewGroup): ItemBgImageBinding {
@@ -33,6 +41,17 @@ class BgAdapter(context: Context, val textColor: Int) :
                 .into(ivBg)
             tvName.setTextColor(textColor)
             tvName.text = item.substringBeforeLast(".")
+            val isSelected = ReadBookConfig.durConfig.curBgType() == 1 &&
+                    ReadBookConfig.durConfig.curBgStr() == item
+            root.background = if (isSelected) {
+                GradientDrawable().apply {
+                    cornerRadius = UiCorner.scaledDp(8f)
+                    setColor(0x00000000)
+                    setStroke(2.dpToPx(), context.accentColor)
+                }
+            } else {
+                null
+            }
         }
     }
 
@@ -42,6 +61,8 @@ class BgAdapter(context: Context, val textColor: Int) :
                 getItemByLayoutPosition(holder.layoutPosition)?.let {
                     ReadBookConfig.durConfig.setCurBg(1, it)
                     postEvent(EventBus.UP_CONFIG, arrayListOf(1))
+                    notifyDataSetChanged()
+                    onSelected?.invoke()
                 }
             }
         }

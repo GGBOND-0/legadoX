@@ -9,12 +9,23 @@
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingStart="6dp"
-    android:paddingEnd="6dp">
+    android:paddingEnd="2dp">
+
+    <io.legado.app.ui.widget.image.CircleImageView
+        android:id="@+id/iv_style_preview"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/image_cover_default"
+        app:civ_border_color="@color/primaryText"
+        app:civ_border_width="1dp"
+        app:text="@string/text" />
 
     <TextView
         android:id="@+id/tv_style_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
         android:layout_weight="1"
         android:ellipsize="end"
         android:includeFontPadding="false"
@@ -22,15 +33,14 @@
         android:textColor="@color/primaryText"
         android:textSize="14sp" />
 
-    <io.legado.app.ui.widget.image.CircleImageView
-        android:id="@+id/iv_style"
+    <ImageView
+        android:id="@+id/iv_delete"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:layout_marginStart="10dp"
-        android:scaleType="centerCrop"
-        android:src="@drawable/image_cover_default"
-        app:civ_border_color="@color/primaryText"
-        app:civ_border_width="1dp"
-        app:text="@string/text" />
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/delete"
+        android:padding="9dp"
+        android:src="@drawable/ic_outline_delete"
+        app:tint="@color/secondaryText" />
 
 </LinearLayout>

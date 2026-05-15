@@ -2,6 +2,7 @@ package io.legado.app.lib.prefs
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.DialogInterface
 import android.content.res.TypedArray
 import android.graphics.Color
 import android.os.Bundle
@@ -210,14 +211,46 @@ class ColorPreference(context: Context, attrs: AttributeSet) : Preference(contex
 
     internal class ColorPickerDialogCompat : ColorPickerDialog() {
 
+        private var compatColorPickerDialogListener: ColorPickerDialogListener? = null
+
+        override fun onCreateDialog(savedInstanceState: Bundle?): android.app.Dialog {
+            val dialog = super.onCreateDialog(savedInstanceState) as AlertDialog
+            if (arguments?.getBoolean(ARG_SHOW_DEFAULT_COLOR_BUTTON) == true) {
+                dialog.setButton(
+                    DialogInterface.BUTTON_NEGATIVE,
+                    getString(io.legado.app.R.string.default_color)
+                ) { _, _ ->
+                    onDefaultColorSelected()
+                }
+            }
+            return dialog
+        }
+
         override fun onStart() {
             super.onStart()
             val alertDialog = dialog as? AlertDialog
             alertDialog?.applyTint()
         }
 
+        override fun setColorPickerDialogListener(
+            colorPickerDialogListener: ColorPickerDialogListener?
+        ) {
+            compatColorPickerDialogListener = colorPickerDialogListener
+            super.setColorPickerDialogListener(colorPickerDialogListener)
+        }
+
+        private fun onDefaultColorSelected() {
+            val dialogId = arguments?.getInt(ARG_ID) ?: 0
+            val listener = compatColorPickerDialogListener
+                ?: activity as? ColorPickerDialogListener
+                ?: return
+            listener.onColorSelected(dialogId, DEFAULT_COLOR)
+            dismiss()
+        }
 
         companion object {
+            const val DEFAULT_COLOR = -1
+
             fun newBuilder(): Builder {
                 return Builder()
             }
@@ -235,6 +268,7 @@ class ColorPreference(context: Context, attrs: AttributeSet) : Preference(contex
             private const val ARG_PRESETS_BUTTON_TEXT = "presetsButtonText"
             private const val ARG_CUSTOM_BUTTON_TEXT = "customButtonText"
             private const val ARG_SELECTED_BUTTON_TEXT = "selectedButtonText"
+            private const val ARG_SHOW_DEFAULT_COLOR_BUTTON = "showDefaultColorButton"
         }
 
         class Builder internal constructor() {
@@ -263,6 +297,7 @@ class ColorPreference(context: Context, attrs: AttributeSet) : Preference(contex
             internal var showAlphaSlider = false
             internal var allowPresets = true
             internal var allowCustom = true
+            internal var showDefaultColorButton = false
             internal var showColorShades = true
 
             @ColorShape
@@ -390,6 +425,17 @@ class ColorPreference(context: Context, attrs: AttributeSet) : Preference(contex
             }
 
             /**
+             * Show/Hide the default color button. The callback color will be [DEFAULT_COLOR].
+             *
+             * @param showDefaultColorButton `true` to show the default color button.
+             * @return This builder object for chaining method calls
+             */
+            fun setShowDefaultColorButton(showDefaultColorButton: Boolean): Builder {
+                this.showDefaultColorButton = showDefaultColorButton
+                return this
+            }
+
+            /**
              * Show/Hide the color shades in the presets picker
              *
              * @param showColorShades `false` to hide the color shades.
@@ -428,6 +474,7 @@ class ColorPreference(context: Context, attrs: AttributeSet) : Preference(contex
                 args.putBoolean(ARG_ALPHA, showAlphaSlider)
                 args.putBoolean(ARG_ALLOW_CUSTOM, allowCustom)
                 args.putBoolean(ARG_ALLOW_PRESETS, allowPresets)
+                args.putBoolean(ARG_SHOW_DEFAULT_COLOR_BUTTON, showDefaultColorButton)
                 args.putInt(ARG_DIALOG_TITLE, dialogTitle)
                 args.putBoolean(ARG_SHOW_COLOR_SHADES, showColorShades)
                 args.putInt(ARG_COLOR_SHAPE, colorShape)
@@ -436,6 +483,15 @@ class ColorPreference(context: Context, attrs: AttributeSet) : Preference(contex
                 args.putInt(ARG_SELECTED_BUTTON_TEXT, selectedButtonText)
                 dialog.arguments = args
                 return dialog
+            }
+
+            /**
+             * Create and show the [ColorPickerDialog] created with this builder.
+             *
+             * @param activity The current activity.
+             */
+            fun show(activity: FragmentActivity) {
+                create().show(activity.supportFragmentManager, "color-picker-dialog")
             }
 
         }

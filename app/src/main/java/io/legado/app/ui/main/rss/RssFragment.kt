@@ -230,7 +230,7 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
             currentRssScrollTarget()?.canScrollVertically(-1) == true
         }
         val updateSourceNameWidth = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            updateRssSourceNameWidth()
+            binding.llRssSourceRow.post(::updateRssSourceNameWidth)
         }
         binding.llRssSourceRow.addOnLayoutChangeListener(updateSourceNameWidth)
         binding.llRssSourceRow.post(::updateRssSourceNameWidth)
@@ -271,7 +271,9 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
         ).filter { it.isVisible }.sumOf { it.measuredWidth.takeIf { width -> width > 0 } ?: it.layoutParams.width }
         val spacing = 36.dpToPx()
         val maxWidth = (rowWidth - actionsWidth - spacing).coerceIn(96.dpToPx(), 190.dpToPx())
-        binding.tvRssSourceSelect.maxWidth = maxWidth
+        if (binding.tvRssSourceSelect.maxWidth != maxWidth) {
+            binding.tvRssSourceSelect.maxWidth = maxWidth
+        }
     }
 
     private fun currentRssScrollTarget(): View? {

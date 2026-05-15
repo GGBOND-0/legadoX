@@ -12,4 +12,10 @@
 
     </item>
 
+    <item
+        android:id="@+id/menu_reload_book_source"
+        android:icon="@drawable/ic_refresh_black_24dp"
+        android:title="@string/reload_book_source"
+        app:showAsAction="never" />
+
 </menu>

@@ -715,6 +715,7 @@
     <string name="ai_read_clear_history_confirm">Clear all Ask AI history for this book?</string>
     <string name="ai_chat_thinking_collapsed">Thinking, tap to expand</string>
     <string name="ai_chat_thinking_done">Thinking completed, tap to expand</string>
+    <string name="select">Select</string>
     <string name="expand">Expand</string>
     <string name="collapse">Collapse</string>
     <string name="config_category_content">Content and rules</string>
@@ -888,6 +889,7 @@
     <string name="ui_corner_reply_follow">Reply bars follow corner scale</string>
     <string name="ui_corner_reply_follow_summary">Allow reply/input bars to use the global corner radius scale</string>
     <string name="btn_default_s">Default</string>
+    <string name="default_color">默认颜色</string>
     <string name="main_menu">Main menu</string>
     <string name="request_permission">Tap to grant permission</string>
     <string name="tip_local_perm_request_storage">阅读R needs Storage permission, please tap the "Grant Permission" button below, or go to "Settings"-"Application Permissions"-to open the required permission. If the permission is still not work, please tap "Select Folder" in the upper right corner to use the system folder picker.</string>
@@ -908,9 +910,9 @@
     <string name="source_auto_changing">Changing source</string>
     <string name="click_to_apply">Tap to join</string>
     <string name="middle">Middle</string>
-    <string name="information">Information</string>
+    <string name="information">Title/Header/Footer</string>
     <string name="switchLayout">Switch Layout</string>
-    <string name="text_font_weight_converter">Text font weight switching</string>
+    <string name="text_font_weight_converter">Text font weight</string>
     <string name="full_screen_gestures_support">Full screen gestures support</string>
     <string name="disable_return_key">Disable return key</string>
 
@@ -1337,7 +1339,8 @@
     <string name="tag_explore_disabled">Flag: found disabled</string>
     <string name="show_read_title_addition">show read title addition area</string>
     <string name="read_bar_style_follow_page">read bar style follow page</string>
-    <string name="read_menu_alpha">Read Menu Opacity</string>
+    <string name="read_menu_bg">Bottom Panel Background</string>
+    <string name="read_menu_alpha">Bottom Panel Opacity</string>
     <string name="read_menu_alpha_summary">Adjust opacity for top/bottom menu panels</string>
     <string name="page_animation_speed_title">Page turn animation speed</string>
     <string name="page_animation_speed_dialog_title">Page turn animation duration (ms)</string>
@@ -1516,6 +1519,7 @@
     <string name="manga_color_filter">滤镜</string>
     <string name="hide_manga_title">隐藏漫画列表标题</string>
     <string name="refresh_explore">刷新发现</string>
+    <string name="reload_book_source">Reload book source</string>
     <string name="padding_display_cutouts">Padding display cutouts</string>
     <string name="read_aloud_pause_resume">Pause/Resume Speech</string>
     <string name="manga_epaper">墨水屏</string>

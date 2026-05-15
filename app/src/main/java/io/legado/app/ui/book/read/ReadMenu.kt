@@ -201,7 +201,7 @@ class ReadMenu @JvmOverloads constructor(
         tvChapterUrl.setTextColor(
             ColorUtils.withAlpha(primaryTextColor, 0.72f)
         )
-        val menuOpacity = (AppConfig.readMenuAlpha / 100f).coerceIn(0.35f, 1f)
+        val menuOpacity = (ReadBookConfig.durConfig.readMenuAlpha / 100f).coerceIn(0.35f, 1f)
         val isBgLight = ColorUtils.isColorLight(bgColor)
         val headerBaseColor = ColorUtils.blendColors(
             palette.surface,
@@ -210,15 +210,18 @@ class ReadMenu @JvmOverloads constructor(
         )
         val sheetBaseColor = ColorUtils.blendColors(
             palette.surface,
-            palette.panel,
-            if (isBgLight) 0.72f else 0.82f
+            palette.primaryColor,
+            if (isBgLight) 0.18f else 0.28f
         )
         val actionBaseColor = ColorUtils.blendColors(
             palette.panelStrong,
             palette.primaryColor,
             if (isBgLight) 0.18f else 0.28f
         )
-        val sheetColor = ColorUtils.withAlpha(sheetBaseColor, menuOpacity)
+        val sheetColor = ColorUtils.withAlpha(
+            ReadBookConfig.durConfig.curReadMenuBgColor() ?: sheetBaseColor,
+            menuOpacity
+        )
         val headerColor = ColorUtils.withAlpha(headerBaseColor, menuOpacity)
         val actionColor = ColorUtils.withAlpha(actionBaseColor, menuOpacity)
         val panelStrokeColor = palette.stroke
@@ -294,7 +297,7 @@ class ReadMenu @JvmOverloads constructor(
         /**
          * 确保视图不被导航栏遮挡
          */
-        bottomMenu.applyNavigationBarPadding()
+        llBottomBg.applyNavigationBarPadding(withInitialPadding = false)
     }
 
     fun reset() {

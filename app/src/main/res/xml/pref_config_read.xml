@@ -137,16 +137,6 @@
         app:isBottomBackground="true" />
 
     <io.legado.app.lib.prefs.Preference
-        android:defaultValue="100"
-        android:key="readMenuAlpha"
-        android:summary="@string/read_menu_alpha_summary"
-        android:title="@string/read_menu_alpha"
-        app:allowDividerAbove="false"
-        app:allowDividerBelow="false"
-        app:iconSpaceReserved="false"
-        app:isBottomBackground="true" />
-
-    <io.legado.app.lib.prefs.Preference
         android:key="pageAnimationSpeed"
         android:summary="@string/page_animation_speed_summary"
         android:title="@string/page_animation_speed_title"

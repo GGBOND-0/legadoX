@@ -1,5 +1,6 @@
 package io.legado.app.ui.config
 
+import android.app.ProgressDialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
@@ -27,6 +28,7 @@ import io.legado.app.help.storage.BackupConfig
 import io.legado.app.help.storage.ImportOldData
 import io.legado.app.help.storage.Restore
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.lib.dialogs.progressDialog
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
@@ -63,6 +65,11 @@ class BackupConfigFragment : PreferenceFragment(),
     private val waitDialog by lazy { WaitDialog(requireContext()) }
     private var backupJob: Job? = null
     private var restoreJob: Job? = null
+
+    private companion object {
+        const val PROGRESS_MAX = 100
+        const val BYTES_PER_MB = 1024L * 1024L
+    }
 
     private val selectBackupPath = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
@@ -296,15 +303,41 @@ class BackupConfigFragment : PreferenceFragment(),
     }
 
     private fun backup(backupPath: String) {
-        waitDialog.setText("备份中…")
-        waitDialog.setOnCancelListener {
-            backupJob?.cancel()
-        }
-        waitDialog.show()
         backupJob?.cancel()
+        val progressDialog = progressDialog(
+            title = getString(R.string.backup),
+            message = "备份中..."
+        ) {
+            isIndeterminate = true
+            max = PROGRESS_MAX
+            setCancelable(true)
+            setOnCancelListener {
+                backupJob?.cancel()
+            }
+        }
+        var lastProgress = -1
+        var lastMegabyte = -1L
+        val onUploadProgress: (Long, Long) -> Unit = progress@{ finished, total ->
+            val progress = if (total > 0) {
+                (finished * PROGRESS_MAX / total).toInt().coerceIn(0, PROGRESS_MAX)
+            } else {
+                -1
+            }
+            val megabyte = finished / BYTES_PER_MB
+            if (progress >= 0) {
+                if (progress == lastProgress && finished < total) return@progress
+                lastProgress = progress
+            } else {
+                if (megabyte == lastMegabyte) return@progress
+                lastMegabyte = megabyte
+            }
+            lifecycleScope.launch(Main) {
+                progressDialog.updateTransferProgress("上传中", finished, total, progress)
+            }
+        }
         backupJob = lifecycleScope.launch {
             try {
-                Backup.backupLocked(requireContext(), backupPath)
+                Backup.backupLocked(requireContext(), backupPath, onUploadProgress)
                 appCtx.toastOnUi(R.string.backup_success)
             } catch (e: Throwable) {
                 ensureActive()
@@ -316,8 +349,7 @@ class BackupConfigFragment : PreferenceFragment(),
                     )
                 )
             } finally {
-                ensureActive()
-                waitDialog.dismiss()
+                progressDialog.dismiss()
             }
         }
     }
@@ -384,18 +416,56 @@ class BackupConfigFragment : PreferenceFragment(),
     }
 
     private fun restoreWebDav(name: String) {
-        waitDialog.setText("恢复中…")
-        waitDialog.show()
-        val task = Coroutine.async {
-            AppWebDav.restoreWebDav(name)
-        }.onError {
-            AppLog.put("WebDav恢复出错\n${it.localizedMessage}", it)
-            appCtx.toastOnUi("WebDav恢复出错\n${it.localizedMessage}")
-        }.onFinally {
-            waitDialog.dismiss()
+        restoreJob?.cancel()
+        val progressDialog = progressDialog(
+            title = getString(R.string.restore),
+            message = "恢复中…"
+        ) {
+            isIndeterminate = true
+            max = PROGRESS_MAX
+            setCancelable(true)
+            setOnCancelListener {
+                restoreJob?.cancel()
+            }
         }
-        waitDialog.setOnCancelListener {
-            task.cancel()
+        var lastProgress = -1
+        var lastMegabyte = -1L
+        val onDownloadProgress: (Long, Long) -> Unit = progress@{ finished, total ->
+            val progress = if (total > 0) {
+                (finished * PROGRESS_MAX / total).toInt().coerceIn(0, PROGRESS_MAX)
+            } else {
+                -1
+            }
+            val megabyte = finished / BYTES_PER_MB
+            if (progress >= 0) {
+                if (progress == lastProgress && finished < total) return@progress
+                lastProgress = progress
+            } else {
+                if (megabyte == lastMegabyte) return@progress
+                lastMegabyte = megabyte
+            }
+            lifecycleScope.launch(Main) {
+                progressDialog.updateTransferProgress("下载中", finished, total, progress)
+            }
+        }
+        restoreJob = lifecycleScope.launch {
+            try {
+                AppWebDav.restoreWebDav(
+                    name = name,
+                    onProgress = onDownloadProgress,
+                    onDownloadFinish = {
+                        lifecycleScope.launch(Main) {
+                            progressDialog.showIndeterminateMessage("恢复中...")
+                        }
+                    }
+                )
+            } catch (e: Throwable) {
+                ensureActive()
+                AppLog.put("WebDav恢复出错\n${e.localizedMessage}", e)
+                appCtx.toastOnUi("WebDav恢复出错\n${e.localizedMessage}")
+            } finally {
+                progressDialog.dismiss()
+            }
         }
     }
 
@@ -405,6 +475,34 @@ class BackupConfigFragment : PreferenceFragment(),
             mode = HandleFileContract.FILE
             allowExtensions = arrayOf("zip")
         }
+    }
+
+    private fun ProgressDialog.updateTransferProgress(
+        action: String,
+        finished: Long,
+        total: Long,
+        progress: Int
+    ) {
+        if (total > 0 && progress >= 0) {
+            isIndeterminate = false
+            max = PROGRESS_MAX
+            this.progress = progress
+            setMessage("$action $progress%\n${formatBytes(finished)} / ${formatBytes(total)}")
+        } else {
+            showIndeterminateMessage("$action\n${formatBytes(finished)}")
+        }
+    }
+
+    private fun ProgressDialog.showIndeterminateMessage(message: String) {
+        isIndeterminate = true
+        setMessage(message)
+    }
+
+    private fun formatBytes(bytes: Long): String {
+        if (bytes < BYTES_PER_MB) {
+            return "${bytes / 1024} KB"
+        }
+        return String.format("%.1f MB", bytes.toDouble() / BYTES_PER_MB)
     }
 
     override fun onDestroyView() {

@@ -17,6 +17,7 @@ import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.config.ThemePackageManager
 import io.legado.app.help.config.NavigationBarIconConfig
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.lib.webdav.ProgressListener
 import io.legado.app.model.BookCover
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
@@ -132,15 +133,23 @@ object Backup {
         }
     }
 
-    suspend fun backupLocked(context: Context, path: String?) {
+    suspend fun backupLocked(
+        context: Context,
+        path: String?,
+        onWebDavUploadProgress: ProgressListener? = null
+    ) {
         mutex.withLock {
             withContext(IO) {
-                backup(context, path)
+                backup(context, path, onWebDavUploadProgress)
             }
         }
     }
 
-    private suspend fun backup(context: Context, path: String?) {
+    private suspend fun backup(
+        context: Context,
+        path: String?,
+        onWebDavUploadProgress: ProgressListener? = null
+    ) {
         LogUtils.d(TAG, "开始备份 path:$path")
         LocalConfig.lastBackup = System.currentTimeMillis()
         val aes = BackupAES()
@@ -259,9 +268,12 @@ object Backup {
                 }
             }
             try {
-                AppWebDav.backUpWebDav(zipFileName)
+                AppWebDav.backUpWebDav(zipFileName, onWebDavUploadProgress)
             } catch (e: Exception) {
                 AppLog.put("上传备份至webdav失败\n$e", e)
+                if (onWebDavUploadProgress != null) {
+                    throw e
+                }
             }
         }
         FileUtils.delete(backupPath)

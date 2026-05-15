@@ -1130,6 +1130,12 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
                 oval = false,
                 selected = true
             )
+            if (!updateBottomNavigationIndicator(animate = false)) {
+                bottomNavigationIndicatorContainer.doOnLayout {
+                    scheduleLiquidGlassSetup(delayMillis = 32L)
+                }
+                return
+            }
             setupLiquidGlassView(
                 liquidGlassView = bottomNavigationGlassView,
                 cornerRadius = bottomBarCornerRadius,
@@ -1415,12 +1421,12 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         liquidGlassView.invalidate()
     }
 
-    private fun updateBottomNavigationIndicator(animate: Boolean) {
-        if (isSidebarMode()) return
-        if (AppConfig.isEInkMode) return
-        val menuView = binding.bottomNavigationView.getChildAt(0) as? ViewGroup ?: return
+    private fun updateBottomNavigationIndicator(animate: Boolean): Boolean {
+        if (isSidebarMode()) return true
+        if (AppConfig.isEInkMode) return true
+        val menuView = binding.bottomNavigationView.getChildAt(0) as? ViewGroup ?: return true
         val itemView = findBottomNavigationItemView(menuView, getBottomNavigationItemId(pagePosition))
-            ?: return
+            ?: return true
         val indicator = binding.bottomNavigationIndicatorContainer
         val targetWidth = minOf(
             bottomIndicatorWidth,
@@ -1430,13 +1436,14 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
             indicator.layoutParams = indicator.layoutParams.apply {
                 width = targetWidth
             }
+            return false
         }
         val baseX = binding.bottomNavigationView.x + menuView.x + itemView.x
         val targetX = baseX + (itemView.width - targetWidth) / 2f
         if (!animate || !indicator.isLaidOut) {
             indicator.x = targetX
             playBottomNavigationIndicatorAnimation(animate = false)
-            return
+            return true
         }
         val startX = indicator.x
         bottomIndicatorAnimator.cancel()
@@ -1447,6 +1454,7 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         }
         bottomIndicatorAnimator.start()
         playBottomNavigationIndicatorAnimation(animate = true)
+        return true
     }
 
     private fun playBottomNavigationIndicatorAnimation(animate: Boolean) {

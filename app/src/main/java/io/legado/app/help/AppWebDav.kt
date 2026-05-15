@@ -12,6 +12,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.storage.Backup
 import io.legado.app.help.storage.Restore
 import io.legado.app.lib.webdav.Authorization
+import io.legado.app.lib.webdav.ProgressListener
 import io.legado.app.lib.webdav.WebDav
 import io.legado.app.lib.webdav.WebDavException
 import io.legado.app.lib.webdav.WebDavFile
@@ -123,10 +124,15 @@ object AppWebDav {
     }
 
     @Throws(WebDavException::class)
-    suspend fun restoreWebDav(name: String) {
+    suspend fun restoreWebDav(
+        name: String,
+        onProgress: ProgressListener? = null,
+        onDownloadFinish: (() -> Unit)? = null
+    ) {
         authorization?.let {
             val webDav = WebDav(rootWebDavUrl + name, it)
-            webDav.downloadTo(Backup.zipFilePath, true)
+            webDav.downloadTo(Backup.zipFilePath, true, onProgress)
+            onDownloadFinish?.invoke()
             FileUtils.delete(Backup.backupPath)
             ZipUtils.unZipToPath(File(Backup.zipFilePath), Backup.backupPath)
             Restore.restoreLocked(Backup.backupPath)
@@ -164,11 +170,11 @@ object AppWebDav {
      * @param fileName 备份文件名
      */
     @Throws(Exception::class)
-    suspend fun backUpWebDav(fileName: String) {
+    suspend fun backUpWebDav(fileName: String, onProgress: ProgressListener? = null) {
         if (!NetworkUtils.isAvailable()) return
         authorization?.let {
             val putUrl = "$rootWebDavUrl$fileName"
-            WebDav(putUrl, it).upload(Backup.zipFilePath)
+            WebDav(putUrl, it).upload(Backup.zipFilePath, onProgress = onProgress)
         }
     }
 

@@ -21,10 +21,15 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
+import okhttp3.MediaType
+import okhttp3.RequestBody
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import okio.BufferedSink
+import okio.ForwardingSink
+import okio.buffer
 import org.intellij.lang.annotations.Language
 import org.jsoup.Jsoup
 import org.jsoup.parser.Parser
@@ -36,6 +41,8 @@ import java.net.URL
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
+
+typealias ProgressListener = (finished: Long, total: Long) -> Unit
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 open class WebDav(
@@ -299,9 +306,40 @@ open class WebDav(
      * @param replaceExisting 是否替换本地的同名文件
      */
     @Throws(WebDavException::class)
-    suspend fun downloadTo(savedPath: String, replaceExisting: Boolean) {
+    suspend fun downloadTo(
+        savedPath: String,
+        replaceExisting: Boolean,
+        onProgress: ProgressListener? = null
+    ) {
         val file = File(savedPath)
         if (file.exists() && !replaceExisting) {
+            return
+        }
+        if (onProgress != null) {
+            val url = httpUrl ?: throw WebDavException("WebDav下载出错\nurl为空")
+            webDavClient.newCallResponse {
+                url(url)
+            }.use { response ->
+                checkResult(response)
+                response.body.use { body ->
+                    val total = body.contentLength()
+                    var finished = 0L
+                    onProgress(finished, total)
+                    body.byteStream().use { input ->
+                        FileOutputStream(file).use { output ->
+                            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                            while (true) {
+                                currentCoroutineContext().ensureActive()
+                                val read = input.read(buffer)
+                                if (read == -1) break
+                                output.write(buffer, 0, read)
+                                finished += read
+                                onProgress(finished, total)
+                            }
+                        }
+                    }
+                }
+            }
             return
         }
         downloadInputStream().use { byteStream ->
@@ -325,17 +363,28 @@ open class WebDav(
      * 上传文件
      */
     @Throws(WebDavException::class)
-    suspend fun upload(localPath: String, contentType: String = DEFAULT_CONTENT_TYPE) {
-        upload(File(localPath), contentType)
+    suspend fun upload(
+        localPath: String,
+        contentType: String = DEFAULT_CONTENT_TYPE,
+        onProgress: ProgressListener? = null
+    ) {
+        upload(File(localPath), contentType, onProgress)
     }
 
     @Throws(WebDavException::class)
-    suspend fun upload(file: File, contentType: String = DEFAULT_CONTENT_TYPE) {
+    suspend fun upload(
+        file: File,
+        contentType: String = DEFAULT_CONTENT_TYPE,
+        onProgress: ProgressListener? = null
+    ) {
         kotlin.runCatching {
             withContext(IO) {
                 if (!file.exists()) throw WebDavException("文件不存在")
                 // 务必注意RequestBody不要嵌套，不然上传时内容可能会被追加多余的文件信息
-                val fileBody = file.asRequestBody(contentType.toMediaType())
+                val requestBody = file.asRequestBody(contentType.toMediaType())
+                val fileBody = onProgress?.let {
+                    ProgressRequestBody(requestBody, it)
+                } ?: requestBody
                 val url = httpUrl ?: throw WebDavException("url不能为空")
                 webDavClient.newCallResponse {
                     url(url)
@@ -451,6 +500,36 @@ open class WebDav(
                 )
             }
             throw WebDavException(message ?: "未知错误 code:${response.code}")
+        }
+    }
+
+    private class ProgressRequestBody(
+        private val requestBody: RequestBody,
+        private val onProgress: ProgressListener
+    ) : RequestBody() {
+
+        override fun contentType(): MediaType? {
+            return requestBody.contentType()
+        }
+
+        override fun contentLength(): Long {
+            return requestBody.contentLength()
+        }
+
+        override fun writeTo(sink: BufferedSink) {
+            val total = contentLength()
+            var finished = 0L
+            onProgress(finished, total)
+            val progressSink = object : ForwardingSink(sink) {
+                override fun write(source: okio.Buffer, byteCount: Long) {
+                    super.write(source, byteCount)
+                    finished += byteCount
+                    onProgress(finished, total)
+                }
+            }
+            val bufferedSink = progressSink.buffer()
+            requestBody.writeTo(bufferedSink)
+            bufferedSink.flush()
         }
     }
 

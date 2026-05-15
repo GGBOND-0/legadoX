@@ -82,6 +82,12 @@ object ThemeConfig {
         postEvent(EventBus.RECREATE, "")
     }
 
+    fun applyDayNightNoRecreate(context: Context) {
+        applyTheme(context)
+        initNightMode()
+        BookCover.upDefaultCover()
+    }
+
     fun applyDayNightInit(context: Context) {
         migrateLegacyDefaultDayPrimary(context)
         applyTheme(context)

@@ -13,6 +13,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.CompoundButton
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.core.view.get
 import androidx.recyclerview.widget.GridLayoutManager
@@ -26,6 +28,7 @@ import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PageAnim
+import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.databinding.DialogReadBookStyleBinding
 import io.legado.app.databinding.ItemBgImageBinding
@@ -35,6 +38,7 @@ import io.legado.app.help.DefaultData
 import io.legado.app.help.book.isImage
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.lib.dialogs.SelectItem
@@ -55,6 +59,7 @@ import io.legado.app.ui.book.read.config.BgTextConfigDialog.Companion.TEXT_ACCEN
 import io.legado.app.ui.book.read.config.BgTextConfigDialog.Companion.TEXT_COLOR
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.font.FontSelectDialog
+import io.legado.app.ui.widget.DetailSeekBar
 import io.legado.app.ui.widget.number.NumberPickerDialog
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.ColorUtils
@@ -81,6 +86,7 @@ import io.legado.app.utils.outputStream
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.printOnDebug
+import io.legado.app.utils.putPrefString
 import io.legado.app.utils.readBytes
 import io.legado.app.utils.readUri
 import io.legado.app.utils.setSelectionSafely
@@ -167,6 +173,9 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
         }
         dsbLineSize.valueFormat = { ((it - 10) / 10f).toString() }
         dsbParagraphSpacing.valueFormat = { (it / 10f).toString() }
+        dsbTextShadow.valueFormat = {
+            percentValue(it)
+        }
         rowBgImage.setOnClickListener { showBgImageSelector() }
         lockHeightToFirstStyleTab()
     }
@@ -277,6 +286,21 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
         }
+        rowBgAlpha.setOnClickListener {
+            NumberPickerDialog(requireContext())
+                .setTitle(getString(R.string.bg_alpha))
+                .setMaxValue(100)
+                .setMinValue(0)
+                .setValue(ReadBookConfig.bgAlpha.coerceIn(0, 100))
+                .show {
+                    ReadBookConfig.bgAlpha = it.coerceIn(0, 100)
+                    updateBgAlphaRow()
+                    postEvent(EventBus.UP_CONFIG, arrayListOf(3))
+                }
+        }
+        btnThemeLight.setOnClickListener { switchReadThemeMode(StyleThemeMode.LIGHT) }
+        btnThemeDark.setOnClickListener { switchReadThemeMode(StyleThemeMode.DARK) }
+        btnThemeEink.setOnClickListener { switchReadThemeMode(StyleThemeMode.EINK) }
         chineseConverter.onChanged {
             ChineseUtils.unLoad(*TransType.entries.toTypedArray())
             updateTextRows()
@@ -310,6 +334,46 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
         }
         tvTextIndent.setOnClickListener {
             rowTextIndent.performClick()
+        }
+        rowTextUnderline.setOnClickListener {
+            if (ReadBook.book?.isImage == true) {
+                return@setOnClickListener
+            }
+            context?.selector(
+                title = getString(R.string.text_underline),
+                items = underlineModeNames()
+            ) { _, index ->
+                ReadBookConfig.durConfig.underlineMode = index
+                updateFontExtraRows()
+                postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
+            }
+        }
+        tvTextUnderlineValue.setOnClickListener {
+            rowTextUnderline.performClick()
+        }
+        val updateTextShadow: (Int) -> Unit = {
+            ReadBookConfig.paperInkStrength = it.coerceIn(0, 100)
+            postEvent(EventBus.UP_CONFIG, arrayListOf(2, 9, 6))
+        }
+        dsbTextShadow.onChanging = updateTextShadow
+        dsbTextShadow.onChanged = updateTextShadow
+        rowDarkStatusIcon.setOnClickListener {
+            val isDark = !ReadBookConfig.durConfig.curStatusIconDark()
+            ReadBookConfig.durConfig.setCurStatusIconDark(isDark)
+            updateMoreRows()
+            callBack?.upSystemUiVisibility()
+        }
+        tvDarkStatusIconValue.setOnClickListener {
+            rowDarkStatusIcon.performClick()
+        }
+        rowScrollFollowBg.setOnClickListener {
+            val isFollow = !ReadBookConfig.durConfig.curReadScrollFollowBackground()
+            ReadBookConfig.durConfig.setCurReadScrollFollowBackground(isFollow)
+            updateMoreRows()
+            postEvent(EventBus.UP_CONFIG, arrayListOf(1, 5))
+        }
+        tvScrollFollowBgValue.setOnClickListener {
+            rowScrollFollowBg.performClick()
         }
         rowPadding.setOnClickListener {
             dismissAllowingStateLoss()
@@ -369,7 +433,7 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
         val selectedBackground = ColorUtils.blendColors(
             palette.surface,
             palette.primaryColor,
-            if (isLight) 0.12f else 0.2f
+            if (isLight) 0.26f else 0.2f
         )
         listOf(
             btnTabText to StyleTab.TEXT,
@@ -440,6 +504,9 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
         }
         updateTextRows()
         updateColorRows()
+        updateFontExtraRows()
+        updateMoreRows()
+        updateThemeModeTabs()
     }
 
     private fun updateDialogStyle() = binding.run {
@@ -456,7 +523,7 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
         val tabBg = ColorUtils.blendColors(
             bg,
             palette.primaryColor,
-            if (isLight) 0.08f else 0.16f
+            if (isLight) 0.16f else 0.16f
         )
         tabEditBar.background = UiCorner.opaqueRounded(
             ColorUtils.withAlpha(tabBg, menuOpacity),
@@ -464,36 +531,67 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
         )
         showStyleTab(currentStyleTab, requestLayout = false)
 
-        // tvPageAnim.setTextColor(secondaryTextColor)
-        // tvName.setTextColor(secondaryTextColor)
-        // tvNameTitle.setTextColor(primaryTextColor)
-
         ivEdit.setColorFilter(secondaryTextColor, PorterDuff.Mode.SRC_IN)
         ivImport.setColorFilter(primaryTextColor, PorterDuff.Mode.SRC_IN)
         ivExport.setColorFilter(primaryTextColor, PorterDuff.Mode.SRC_IN)
+        applyDialogTextColors()
+    }
 
-        // tvbgimage.setTextColor(primaryTextColor)
-        // tvShareLayout.setTextColor(primaryTextColor)
-        // tvTextColor.setTextColor(primaryTextColor)
-        // tvBgColor.setTextColor(primaryTextColor)
-        // tvTextAccentColor.setTextColor(primaryTextColor)
-        // tvMenuBgColor.setTextColor(primaryTextColor)
-        // tvReadMenuAlpha.setTextColor(primaryTextColor)
-        // listOf(
-        //     textFontWeightConverter,
-        //     tvTextFont,
-        //     tvTextIndent,
-        //     chineseConverter,
-        //     tvPadding,
-        //     tvTip,
-        //     tvTextColorValue,
-        //     tvBgColorValue,
-        //     tvTextAccentColorValue,
-        //     tvMenuBgColorValue,
-        //     tvReadMenuAlphaValue
-        // ).forEach {
-        //     it.setTextColor(secondaryTextColor)
-        // }
+    private fun applyDialogTextColors() = binding.run {
+        applyTextColorDeep(rootView)
+        listOf(
+            tvName,
+            tvTextFont,
+            tvTextIndent,
+            tvTextUnderlineValue,
+            tvTextColorValue,
+            tvBgColorValue,
+            tvTextAccentColorValue,
+            tvMenuBgColorValue,
+            tvReadMenuAlphaValue,
+            tvBgAlphaValue,
+            tvDarkStatusIconValue,
+            tvScrollFollowBgValue,
+            tvPadding,
+            tvTip
+        ).forEach {
+            it.setTextColor(secondaryTextColor)
+        }
+        listOf(
+            dsbTextSize,
+            dsbTextLetterSpacing,
+            dsbLineSize,
+            dsbParagraphSpacing,
+            dsbTextShadow
+        ).forEach {
+            applyDetailSeekBarColors(it)
+        }
+    }
+
+    private fun applyTextColorDeep(view: View) {
+        if (view is TextView) {
+            view.setTextColor(primaryTextColor)
+        }
+        if (view is ViewGroup) {
+            repeat(view.childCount) { index ->
+                applyTextColorDeep(view.getChildAt(index))
+            }
+        }
+    }
+
+    private fun applyDetailSeekBarColors(seekBar: DetailSeekBar) {
+        fun apply(view: View) {
+            when (view) {
+                is TextView -> view.setTextColor(primaryTextColor)
+                is ImageView -> view.setColorFilter(primaryTextColor, PorterDuff.Mode.SRC_IN)
+            }
+            if (view is ViewGroup) {
+                repeat(view.childCount) { index ->
+                    apply(view.getChildAt(index))
+                }
+            }
+        }
+        apply(seekBar)
     }
 
     private fun updateTextRows() = binding.run {
@@ -508,6 +606,59 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
         val config = ReadBookConfig.config
         tvPadding.text = getString(R.string.setting)
         tvTip.text = getString(R.string.setting)
+    }
+
+    private fun updateFontExtraRows() = binding.run {
+        rowTextUnderline.visibility = if (ReadBook.book?.isImage == true) {
+            View.GONE
+        } else {
+            View.VISIBLE
+        }
+        tvTextUnderlineValue.text = underlineModeNames()
+            .getOrNull(ReadBookConfig.durConfig.underlineMode)
+            ?: getString(R.string.jf_convert_o)
+        dsbTextShadow.progress = ReadBookConfig.paperInkStrength.coerceIn(0, 100)
+    }
+
+    private fun updateMoreRows() = binding.run {
+        tvDarkStatusIconValue.text = switchValue(ReadBookConfig.durConfig.curStatusIconDark())
+        tvScrollFollowBgValue.text = switchValue(
+            ReadBookConfig.durConfig.curReadScrollFollowBackground()
+        )
+    }
+
+    private fun updateThemeModeTabs() = binding.run {
+        val bg = ReadBookConfig.durConfig.curReadMenuBgColor() ?: defaultReadMenuBgColor()
+        val palette = ReaderSheetStyle.resolve(requireContext(), bg)
+        val isLight = ColorUtils.isColorLight(bg)
+        val selectedBackground = ColorUtils.blendColors(
+            palette.surface,
+            palette.primaryColor,
+            if (isLight) 0.26f else 0.2f
+        )
+        val menuOpacity = (ReadBookConfig.durConfig.readMenuAlpha / 100f).coerceIn(0.35f, 1f)
+        themeModeEditBar.background = UiCorner.opaqueRounded(
+            ColorUtils.withAlpha(
+                ColorUtils.blendColors(bg, palette.primaryColor, if (isLight) 0.16f else 0.16f),
+                menuOpacity
+            ),
+            UiCorner.panelRadius(requireContext())
+        )
+        listOf(
+            btnThemeLight to StyleThemeMode.LIGHT,
+            btnThemeDark to StyleThemeMode.DARK,
+            btnThemeEink to StyleThemeMode.EINK
+        ).forEach { (tabView, mode) ->
+            tabView.isSelected = mode == currentReadThemeMode()
+            tabView.background = if (tabView.isSelected) {
+                UiCorner.opaqueRounded(
+                    ColorUtils.withAlpha(selectedBackground, menuOpacity),
+                    UiCorner.actionRadius(requireContext())
+                )
+            } else {
+                ColorDrawable(Color.TRANSPARENT)
+            }
+        }
     }
 
     override val curFontPath: String
@@ -567,6 +718,7 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
         tvTextAccentColorValue.text = textAccentColor.toHexText()
         tvMenuBgColorValue.text = config.curReadMenuBgColor()?.toHexText() ?: getString(R.string.btn_default_s)
         updateReadMenuAlphaRow()
+        updateBgAlphaRow()
         vwTextColorSwatch.background = colorSwatch(textColor)
         vwBgColorSwatch.background = if (bgIsImage) {
             config.curBgDrawable(22.dpToPx(), 22.dpToPx())
@@ -583,6 +735,10 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
             R.string.ui_layout_alpha_value,
             ReadBookConfig.durConfig.readMenuAlpha.coerceIn(35, 100)
         )
+    }
+
+    private fun updateBgAlphaRow() = binding.run {
+        tvBgAlphaValue.text = percentValue(ReadBookConfig.bgAlpha.coerceIn(0, 100))
     }
 
     private fun defaultReadMenuBgColor(): Int {
@@ -612,6 +768,40 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
             setColor(color)
             setStroke(1.dpToPx(), secondaryTextColor)
         }
+    }
+
+    private fun currentReadThemeMode(): StyleThemeMode {
+        return when {
+            AppConfig.isEInkMode -> StyleThemeMode.EINK
+            AppConfig.isNightTheme -> StyleThemeMode.DARK
+            else -> StyleThemeMode.LIGHT
+        }
+    }
+
+    private fun switchReadThemeMode(mode: StyleThemeMode) {
+        if (currentReadThemeMode() == mode) {
+            return
+        }
+        requireContext().putPrefString(PreferKey.themeMode, mode.preferenceValue)
+        AppConfig.themeMode = mode.preferenceValue
+        AppConfig.isEInkMode = mode == StyleThemeMode.EINK
+        ThemeConfig.applyDayNightNoRecreate(requireContext())
+        upView()
+        callBack?.upSystemUiVisibility()
+        postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
+        postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+    }
+
+    private fun underlineModeNames(): List<CharSequence> {
+        return listOf(getString(R.string.jf_convert_o), "实线", "虚线")
+    }
+
+    private fun switchValue(value: Boolean): String {
+        return if (value) "开启" else getString(R.string.jf_convert_o)
+    }
+
+    private fun percentValue(value: Int): String {
+        return if (value == 0) getString(R.string.jf_convert_o) else "$value%"
     }
 
     private fun showBgImageSelector() {
@@ -1012,5 +1202,11 @@ class ReadStyleDialog : BaseDialogFragment(R.layout.dialog_read_book_style),
 
     private enum class StyleTab {
         TEXT, PAGE, STYLE
+    }
+
+    private enum class StyleThemeMode(val preferenceValue: String) {
+        LIGHT("1"),
+        DARK("2"),
+        EINK("3")
     }
 }

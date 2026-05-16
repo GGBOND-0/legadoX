@@ -173,6 +173,7 @@ object BookHelp {
         try {
             saveText(book, bookChapter, content)
             //saveImages(bookSource, book, bookChapter, content)
+            CacheManifestHelper.refresh(book)
             postEvent(EventBus.SAVE_CONTENT, Pair(book, bookChapter))
         } catch (e: Exception) {
             e.printStackTrace()

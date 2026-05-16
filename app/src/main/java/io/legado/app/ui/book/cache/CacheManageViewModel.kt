@@ -19,7 +19,9 @@ import io.legado.app.help.book.getBookSource
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isNotShelf
 import io.legado.app.help.book.isVideo
+import io.legado.app.help.book.removeType
 import io.legado.app.model.CacheBook
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.getMediaRequest
@@ -272,6 +274,7 @@ class CacheManageViewModel(application: Application) : BaseViewModel(application
             val sameUrlBook = appDb.bookDao.getBook(manifest.bookUrl)
             val sameNameBook = appDb.bookDao.getBook(manifest.name, manifest.author)
             val cacheBook = CacheManifestHelper.toBook(manifest).apply {
+                removeType(BookType.notShelf)
                 sameUrlBook?.let {
                     group = it.group
                     order = it.order
@@ -437,8 +440,8 @@ class CacheManageViewModel(application: Application) : BaseViewModel(application
             return null
         }
         val cacheNames = getCacheFileNames(book)
-        val needsChapterList = book.totalChapterNum <= 0
-        val manifest = if (needsChapterList) CacheManifestHelper.read(book) else null
+        val needsChapterList = book.totalChapterNum <= 0 || book.isNotShelf
+        var manifest = knownManifest ?: CacheManifestHelper.read(book)
         val dbChapters = if (needsChapterList) {
             appDb.bookChapterDao.getChapterList(book.bookUrl)
         } else {
@@ -451,6 +454,9 @@ class CacheManageViewModel(application: Application) : BaseViewModel(application
         if (rawCachedCount <= 0 && taskState?.active != true) {
             CacheManifestHelper.delete(book)
             return null
+        }
+        if (book.isNotShelf && manifest == null) {
+            manifest = CacheManifestHelper.refresh(book, chapters)
         }
         val totalChapterCount = book.totalChapterNum.takeIf { it > 0 }
             ?: chapters.size.takeIf { it > 0 }
@@ -466,7 +472,7 @@ class CacheManageViewModel(application: Application) : BaseViewModel(application
             totalChapterCount = totalChapterCount,
             taskState = taskState,
             manifest = manifest,
-            inBookshelf = true,
+            inBookshelf = !book.isNotShelf,
             sourceAvailable = book.isLocal || book.getBookSource() != null
         )
     }
@@ -474,9 +480,13 @@ class CacheManageViewModel(application: Application) : BaseViewModel(application
     private fun buildMediaCacheBookItem(
         book: Book,
         mode: CacheManageMode,
-        manifest: CacheBookManifest?,
+        initialManifest: CacheBookManifest?,
         taskState: AudioCacheTaskState?
     ): CacheBookItem? {
+        var manifest = initialManifest
+        if (book.isNotShelf && manifest == null) {
+            manifest = CacheManifestHelper.refresh(book)
+        }
         val hasVisibleTask = taskState.isVisibleAudioTask()
         if (manifest == null && !hasVisibleTask) return null
         val candidateCachedIndexes = manifest.cachedIndexes()
@@ -504,7 +514,7 @@ class CacheManageViewModel(application: Application) : BaseViewModel(application
             totalChapterCount = totalChapterCount,
             taskState = taskState,
             manifest = manifest,
-            inBookshelf = true,
+            inBookshelf = !book.isNotShelf,
             sourceAvailable = book.isLocal || book.getBookSource() != null
         )
     }
@@ -614,17 +624,7 @@ class CacheManageViewModel(application: Application) : BaseViewModel(application
     }
 
     private fun refreshManifest(book: Book) {
-        val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
-            .takeIf { it.isNotEmpty() }
-            ?: CacheManifestHelper.read(book)?.let(CacheManifestHelper::toChapters).orEmpty()
-        if (chapters.isEmpty()) {
-            CacheManifestHelper.delete(book)
-            return
-        }
-        val cacheNames = getCacheFileNames(book)
-        CacheManifestHelper.write(book, chapters) {
-            isChapterCached(book, it, cacheNames, validateImageContent = false)
-        }
+        CacheManifestHelper.refresh(book)
     }
 
     private suspend fun resolveMediaRequest(

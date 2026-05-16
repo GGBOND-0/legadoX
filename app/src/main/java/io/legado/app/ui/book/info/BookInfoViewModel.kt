@@ -24,13 +24,16 @@ import io.legado.app.help.book.addType
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.getExportFileName
 import io.legado.app.help.book.getRemoteUrl
+import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isNotShelf
 import io.legado.app.help.book.isSameNameAuthor
+import io.legado.app.help.book.isVideo
 import io.legado.app.help.book.isWebFile
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.updateTo
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.help.exoplayer.ExoPlayerHelper
 import io.legado.app.lib.webdav.ObjectNotFoundException
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.BookCover
@@ -544,9 +547,16 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
         return book
     }
 
-    fun delBook(deleteOriginal: Boolean = false, success: (() -> Unit)? = null) {
+    fun delBook(
+        deleteOriginal: Boolean = false,
+        deleteCache: Boolean = false,
+        success: (() -> Unit)? = null
+    ) {
         execute {
             bookData.value?.let {
+                if (deleteCache) {
+                    clearBookCache(it)
+                }
                 it.delete()
                 inBookshelf = false
                 if (it.isLocal) {
@@ -558,15 +568,23 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
+    private fun clearBookCache(book: Book) {
+        if (book.isAudio || book.isVideo) {
+            appDb.bookChapterDao.getChapterList(book.bookUrl)
+                .forEach { ExoPlayerHelper.removeMediaCache(it.resourceUrl) }
+        }
+        BookHelp.clearCache(book)
+        if (ReadBook.book?.bookUrl == book.bookUrl) {
+            ReadBook.clearTextChapter()
+        }
+        if (ReadManga.book?.bookUrl == book.bookUrl) {
+            ReadManga.clearMangaChapter()
+        }
+    }
+
     fun clearCache(book: Book) {
         execute {
-            BookHelp.clearCache(book)
-            if (ReadBook.book?.bookUrl == book.bookUrl) {
-                ReadBook.clearTextChapter()
-            }
-            if (ReadManga.book?.bookUrl == book.bookUrl) {
-                ReadManga.clearMangaChapter()
-            }
+            clearBookCache(book)
         }.onSuccess {
             context.toastOnUi(R.string.clear_cache_success)
         }.onError {

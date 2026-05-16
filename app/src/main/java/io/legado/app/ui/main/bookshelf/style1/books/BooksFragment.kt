@@ -17,13 +17,13 @@ import androidx.recyclerview.widget.RecyclerView.Adapter.StateRestorationPolicy
 import io.legado.app.R
 import io.legado.app.base.BaseFragment
 import io.legado.app.constant.AppLog
+import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.databinding.FragmentBooksBinding
-import io.legado.app.help.book.BookTagHelper
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.primaryColor
@@ -55,10 +55,11 @@ import kotlin.math.max
 class BooksFragment() : BaseFragment(R.layout.fragment_books),
     BaseBooksAdapter.CallBack {
 
-    constructor(position: Int, group: BookGroup) : this() {
+    constructor(position: Int, group: BookGroup, secondaryGroupId: Long) : this() {
         val bundle = Bundle()
         bundle.putInt("position", position)
         bundle.putLong("groupId", group.groupId)
+        bundle.putLong("secondaryGroupId", secondaryGroupId)
         bundle.putInt("bookSort", group.getRealBookSort())
         bundle.putBoolean("enableRefresh", group.enableRefresh)
         bundle.putBoolean("onlyUpdateRead", group.onlyUpdateRead)
@@ -86,12 +87,14 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
         private set
     var groupId = -1L
         private set
+    var secondaryGroupId = BookGroup.IdAll
+        private set
     var bookSort = 0
         private set
     private var upLastUpdateTimeJob: Job? = null
     private var enableRefresh = true
     private var onlyUpdateRead = false
-    private var bookTagFilter = ""
+    private var secondaryGroupFilterId = BookGroup.IdAll
     private val bookshelfMargin by lazy { AppConfig.bookshelfMargin }
     private var itemCount = 0
     private var totalRows = 0
@@ -100,9 +103,11 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
         arguments?.let {
             position = it.getInt("position", 0)
             groupId = it.getLong("groupId", -1)
+            secondaryGroupId = it.getLong("secondaryGroupId", BookGroup.IdAll)
             bookSort = it.getInt("bookSort", 0)
             enableRefresh = it.getBoolean("enableRefresh", true)
             onlyUpdateRead = it.getBoolean("onlyUpdateRead", false)
+            secondaryGroupFilterId = secondaryGroupId
             binding.refreshLayout.isEnabled = enableRefresh
         }
         initRecyclerView()
@@ -112,7 +117,9 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
     private fun initRecyclerView() {
         binding.rvBookshelf.setEdgeEffectColor(primaryColor)
         binding.rvBookshelf.clipToPadding = true
-        binding.rvBookshelf.applyMainBottomBarPadding()
+        binding.rvBookshelf.applyMainBottomBarPadding(
+            usePaddingForRecyclerView = true
+        )
         upFastScrollerBar()
         binding.refreshLayout.setColorSchemeColors(accentColor)
         binding.refreshLayout.setProgressViewOffset(true, (-28).dpToPx(), 56.dpToPx())
@@ -217,10 +224,11 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
         binding.refreshLayout.isEnabled = enable
     }
 
-    fun setBookTagFilter(tag: String) {
-        val normalized = tag.trim()
-        if (bookTagFilter == normalized) return
-        bookTagFilter = normalized
+    fun setSecondaryGroupFilter(groupId: Long) {
+        if (secondaryGroupFilterId == groupId) return
+        secondaryGroupId = groupId
+        arguments?.putLong("secondaryGroupId", groupId)
+        secondaryGroupFilterId = groupId
         upRecyclerData()
     }
 
@@ -230,6 +238,7 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
     private fun upRecyclerData() {
         booksFlowJob?.cancel()
         booksFlowJob = viewLifecycleOwner.lifecycleScope.launch {
+            val userGroupIds = appDb.bookGroupDao.idsSum
             appDb.bookDao.flowByGroup(groupId).map { list ->
                 //排序
                 when (bookSort) {
@@ -252,10 +261,10 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
                     else -> list.sortedByDescending { it.durChapterTime }
                 }
             }.map { list ->
-                val filteredList = if (bookTagFilter.isBlank()) {
+                val filteredList = if (secondaryGroupFilterId == BookGroup.IdAll) {
                     list
                 } else {
-                    list.filter { it.hasCustomTag(bookTagFilter) }
+                    list.filter { it.isInSecondaryGroup(secondaryGroupFilterId, userGroupIds) }
                 }
                 list to filteredList
             }.flowWithLifecycleAndDatabaseChangeFirst(
@@ -299,10 +308,6 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
         return booksAdapter.getItems()
     }
 
-    private fun Book.hasCustomTag(tag: String): Boolean {
-        return BookTagHelper.has(customTag, tag)
-    }
-
     fun gotoTop() {
         if (AppConfig.isEInkMode) {
             binding.rvBookshelf.scrollToPosition(0)
@@ -337,6 +342,19 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
 
     override fun isUpdate(bookUrl: String): Boolean {
         return activityViewModel.isUpdate(bookUrl)
+    }
+
+    private fun Book.isInSecondaryGroup(groupId: Long, userGroupIds: Long): Boolean {
+        return when (groupId) {
+            BookGroup.IdAll -> true
+            BookGroup.IdLocal -> type and BookType.local > 0
+            BookGroup.IdAudio -> type and BookType.audio > 0
+            BookGroup.IdImage -> type and BookType.image > 0
+            BookGroup.IdVideo -> type and BookType.video > 0
+            BookGroup.IdError -> type and BookType.updateError > 0
+            BookGroup.IdUngrouped -> userGroupIds and group == 0L
+            else -> groupId > 0 && group and groupId > 0
+        }
     }
 
     @SuppressLint("NotifyDataSetChanged")

@@ -24,8 +24,8 @@ interface BookDao {
             BookGroup.IdAll -> flowAll()
             BookGroup.IdLocal -> flowLocal()
             BookGroup.IdAudio -> flowAudio()
-            BookGroup.IdNetNone -> flowNetNoGroup()
-            BookGroup.IdLocalNone -> flowLocalNoGroup()
+            BookGroup.IdImage -> flowImage()
+            BookGroup.IdUngrouped -> flowUngrouped()
             BookGroup.IdVideo -> flowVideo()
             BookGroup.IdError -> flowUpdateError()
             else -> flowByUserGroup(groupId)
@@ -39,7 +39,7 @@ interface BookDao {
         select * from books where type & ${BookType.text} > 0
         and type & ${BookType.local} = 0
         and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
-        and (select show from book_groups where groupId = ${BookGroup.IdNetNone}) != 1
+        and (select show from book_groups where groupId = ${BookGroup.IdUngrouped}) != 1
         """
     )
     fun flowRoot(): Flow<List<Book>>
@@ -50,6 +50,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE type & ${BookType.audio} > 0")
     fun flowAudio(): Flow<List<Book>>
 
+    @Query("SELECT * FROM books WHERE type & ${BookType.image} > 0")
+    fun flowImage(): Flow<List<Book>>
+
     @Query("SELECT * FROM books WHERE type & ${BookType.video} > 0")
     fun flowVideo(): Flow<List<Book>>
 
@@ -58,19 +61,10 @@ interface BookDao {
 
     @Query(
         """
-        select * from books where type & ${BookType.audio} = 0 and type & ${BookType.local} = 0 and type & ${BookType.video} = 0
-        and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
+        select * from books where ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
         """
     )
-    fun flowNetNoGroup(): Flow<List<Book>>
-
-    @Query(
-        """
-        select * from books where type & ${BookType.local} > 0
-        and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
-        """
-    )
-    fun flowLocalNoGroup(): Flow<List<Book>>
+    fun flowUngrouped(): Flow<List<Book>>
 
     @Query("SELECT * FROM books WHERE (`group` & :group) > 0")
     fun flowByUserGroup(group: Long): Flow<List<Book>>

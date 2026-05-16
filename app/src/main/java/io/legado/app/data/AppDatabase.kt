@@ -9,6 +9,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import io.legado.app.R
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.BookGroupDao
@@ -201,28 +202,35 @@ abstract class AppDatabase : RoomDatabase() {
                 @Language("sql")
                 val insertBookGroupMusicSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdAudio}, '音频', -8, 1
+                    select ${BookGroup.IdAudio}, '音频', -7, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdAudio})
                 """.trimIndent()
                 db.execSQL(insertBookGroupMusicSql)
                 @Language("sql")
-                val insertBookGroupNetNoneGroupSql = """
+                val insertBookGroupImageSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdNetNone}, '网络未分组', -7, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdNetNone})
+                    select ${BookGroup.IdImage}, '${appCtx.getString(R.string.manga)}', -8, 1
+                    where not exists (select * from book_groups where groupId = ${BookGroup.IdImage})
                 """.trimIndent()
-                db.execSQL(insertBookGroupNetNoneGroupSql)
+                db.execSQL(insertBookGroupImageSql)
                 @Language("sql")
-                val insertBookGroupLocalNoneGroupSql = """
+                val insertBookGroupUngroupedSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdLocalNone}, '本地未分组', -6, 0
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdLocalNone})
+                    select ${BookGroup.IdUngrouped}, '${appCtx.getString(R.string.no_group)}', -5, 1
+                    where not exists (select * from book_groups where groupId = ${BookGroup.IdUngrouped})
                 """.trimIndent()
-                db.execSQL(insertBookGroupLocalNoneGroupSql)
+                db.execSQL(insertBookGroupUngroupedSql)
+                @Language("sql")
+                val updateBookGroupUngroupedSql =
+                    "update book_groups set groupName = '${appCtx.getString(R.string.no_group)}' where groupId = ${BookGroup.IdUngrouped}"
+                db.execSQL(updateBookGroupUngroupedSql)
+                @Language("sql")
+                val deleteBookGroupLocalNoneSql = "delete from book_groups where groupId = -5"
+                db.execSQL(deleteBookGroupLocalNoneSql)
                 @Language("sql")
                 val insertBookGroupVideoSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdVideo}, '视频', -5, 1
+                    select ${BookGroup.IdVideo}, '视频', -6, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdVideo})
                     """.trimIndent()
                 db.execSQL(insertBookGroupVideoSql)

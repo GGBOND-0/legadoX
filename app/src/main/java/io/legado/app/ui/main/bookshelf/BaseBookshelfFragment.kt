@@ -12,7 +12,6 @@ import androidx.core.view.indices
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.base.VMBaseFragment
 import io.legado.app.constant.EventBus
@@ -23,7 +22,6 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.databinding.DialogBookshelfConfigBinding
 import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.help.DirectLinkUpload
-import io.legado.app.help.book.BookTagHelper
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.utils.applyTint
@@ -49,8 +47,6 @@ import io.legado.app.utils.sendToClip
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.launch
 
 abstract class BaseBookshelfFragment(layoutId: Int) : VMBaseFragment<BookshelfViewModel>(layoutId),
     MainFragmentInterface {
@@ -152,9 +148,6 @@ abstract class BaseBookshelfFragment(layoutId: Int) : VMBaseFragment<BookshelfVi
             R.id.menu_update_toc -> activityViewModel.upToc(books, onlyUpdateRead)
             R.id.menu_bookshelf_layout -> configBookshelf()
             R.id.menu_group_manage -> showDialogFragment<GroupManageDialog>()
-            R.id.menu_book_tag_manage -> startActivity<BookshelfTagManageActivity> {
-                putExtra("groupId", groupId)
-            }
             R.id.menu_add_local -> startActivity<ImportBookActivity>()
             R.id.menu_add_url -> showAddBookByUrlAlert()
             R.id.menu_bookshelf_manage -> startActivity<BookshelfManageActivity> {
@@ -175,45 +168,6 @@ abstract class BaseBookshelfFragment(layoutId: Int) : VMBaseFragment<BookshelfVi
 
             R.id.menu_import_bookshelf -> importBookshelfAlert(groupId)
             R.id.menu_log -> showDialogFragment<AppLogDialog>()
-        }
-    }
-
-    @SuppressLint("InflateParams")
-    protected open fun showBookTagManageAlert() {
-        val targetBooks = books
-        val tags = targetBooks
-            .flatMap { BookTagHelper.parse(it.customTag) }
-            .distinct()
-            .sorted()
-        if (tags.isEmpty()) {
-            toastOnUi(R.string.bookshelf_tag_none)
-            return
-        }
-        val checked = BooleanArray(tags.size) { true }
-        val labels = tags.map { tag ->
-            "$tag (${targetBooks.count { BookTagHelper.has(it.customTag, tag) }})"
-        }.toTypedArray()
-        alert(titleResource = R.string.bookshelf_tag_manage) {
-            setMessage(getString(R.string.bookshelf_tag_manage_hint))
-            multiChoiceItems(labels, checked) { _, which, isChecked ->
-                checked[which] = isChecked
-            }
-            okButton {
-                val keepTags = tags.filterIndexed { index, _ -> checked[index] }.toSet()
-                lifecycleScope.launch(IO) {
-                    targetBooks.forEach { book ->
-                        val normalized = BookTagHelper.join(
-                            BookTagHelper.parse(book.customTag).filter { it in keepTags }
-                        )
-                        if (normalized != book.customTag) {
-                            book.customTag = normalized
-                            appDb.bookDao.update(book)
-                        }
-                    }
-                    postEvent(EventBus.BOOKSHELF_REFRESH, "")
-                }
-            }
-            cancelButton()
         }
     }
 

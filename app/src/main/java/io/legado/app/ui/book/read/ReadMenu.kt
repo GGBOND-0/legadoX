@@ -186,8 +186,12 @@ class ReadMenu @JvmOverloads constructor(
 
     private fun initView(reset: Boolean = false) = binding.run {
         if (AppConfig.isNightTheme) {
+            tvQuickNightThemeLabel.text = context.getString(R.string.theme_day)
+            fabNightTheme.contentDescription = context.getString(R.string.theme_day)
             fabNightTheme.setImageResource(R.drawable.ic_daytime)
         } else {
+            tvQuickNightThemeLabel.text = context.getString(R.string.theme_night)
+            fabNightTheme.contentDescription = context.getString(R.string.theme_night)
             fabNightTheme.setImageResource(R.drawable.ic_brightness)
         }
         initAnimation()
@@ -613,24 +617,24 @@ class ReadMenu @JvmOverloads constructor(
         })
 
         //搜索
-        fabSearch.setOnClickListener {
+        llFabSearch.setOnClickListener {
             runMenuOut {
                 callBack.openSearchActivity(null)
             }
         }
 
         //自动翻页
-        fabAutoPage.setOnClickListener {
+        llFabAutoPage.setOnClickListener {
             runMenuOut {
                 callBack.autoPage()
             }
         }
 
         //替换
-        fabReplaceRule.setOnClickListener { callBack.openReplaceRule() }
+        llFabReplaceRule.setOnClickListener { callBack.openReplaceRule() }
 
         //夜间模式
-        fabNightTheme.setOnClickListener {
+        llFabNightTheme.setOnClickListener {
             AppConfig.isNightTheme = !AppConfig.isNightTheme
             ThemeConfig.applyDayNight(context)
         }

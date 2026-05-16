@@ -33,24 +33,13 @@ interface BookGroupDao {
             or groupId = -1
             or (groupId = -2 and exists (select 1 from books where type & ${BookType.local} > 0))
             or (groupId = -3 and exists (select 1 from books where type & ${BookType.audio} > 0))
+            or (groupId = -7 and exists (select 1 from books where type & ${BookType.image} > 0))
             or (groupId = -6 and exists (select 1 from books where type & ${BookType.video} > 0))
             or (groupId = -11 and exists (select 1 from books where type & ${BookType.updateError} > 0))
             or (groupId = -4 
                 and exists (
                     select 1 from books 
-                    where type & ${BookType.audio} = 0
-                    and type & ${BookType.video} = 0
-                    and type & ${BookType.local} = 0
-                    and const.sumGroupId & `group` = 0
-                )
-            )
-            or (groupId = -5
-                and exists (
-                    select 1 from books 
-                    where type & ${BookType.audio} = 0
-                    and type & ${BookType.video} = 0
-                    and type & ${BookType.local} > 0
-                    and const.sumGroupId & `group` = 0
+                    where const.sumGroupId & `group` = 0
                 )
             )
         )
@@ -70,7 +59,7 @@ interface BookGroupDao {
     @get:Query("SELECT * FROM book_groups ORDER BY `order`")
     val all: List<BookGroup>
 
-    @get:Query("select count(*) < 64 from book_groups where groupId >= 0 or groupId == ${Long.MIN_VALUE}")
+    @get:Query("select count(*) < 64 from book_groups where groupId >= 0")
     val canAddGroup: Boolean
 
     @Query("update book_groups set show = 1 where groupId = :groupId")

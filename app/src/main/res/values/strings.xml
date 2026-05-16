@@ -84,6 +84,7 @@
     <string name="read_style">Book styles</string>
     <string name="version">Version</string>
     <string name="local">Local</string>
+    <string name="manga">Manga</string>
     <string name="search">Search</string>
     <string name="origin_format">Origin: %s</string>
     <string name="read_dur_progress">Origin: %s</string>
@@ -1359,8 +1360,6 @@
     <string name="ignore_audio_focus_summary">Allow audio to be played at the same time as other applications</string>
     <string name="refresh_sort">Refresh sort</string>
     <string name="cover_decode_js">Decode Cover Js(coverDecodeJs)</string>
-    <string name="net_no_group">Network ungrouped</string>
-    <string name="local_no_group">Local ungrouped</string>
     <string name="parallel_export_book">Multithreaded export</string>
     <string name="progress_bar_behavior">Progress bar behavior</string>
     <string name="source_edit_text_max_line">Maximum number of rows in the source edit box</string>

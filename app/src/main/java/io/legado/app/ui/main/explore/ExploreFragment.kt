@@ -154,6 +154,24 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     private var discoverLoadingGeneration = 0L
     private var discoveryModeLoaded = false
 
+    private fun areBookSourcePartListsSame(
+        old: List<BookSourcePart>,
+        new: List<BookSourcePart>
+    ): Boolean {
+        if (old.size != new.size) return false
+        return old.zip(new).all { (oldItem, newItem) ->
+            oldItem.bookSourceUrl == newItem.bookSourceUrl
+                    && oldItem.bookSourceName == newItem.bookSourceName
+                    && oldItem.bookSourceGroup == newItem.bookSourceGroup
+                    && oldItem.customOrder == newItem.customOrder
+                    && oldItem.enabled == newItem.enabled
+                    && oldItem.enabledExplore == newItem.enabledExplore
+                    && oldItem.hasLoginUrl == newItem.hasLoginUrl
+                    && oldItem.hasExploreUrl == newItem.hasExploreUrl
+                    && oldItem.bookSourceType == newItem.bookSourceType
+        }
+    }
+
     private companion object {
         const val MENU_DISCOVER_LOGIN = 1
         const val MENU_DISCOVER_SWITCH_LAYOUT = 2
@@ -621,7 +639,7 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
                     AppDatabase.BOOK_SOURCE_TABLE_NAME
                 )
                 .conflate()
-                .distinctUntilChanged()
+                .distinctUntilChanged(::areBookSourcePartListsSame)
                 .collect { list ->
                     discoverSources.clear()
                     discoverSources.addAll(list)
@@ -653,6 +671,14 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
                     ) {
                         selectDiscoverSource(selected)
                     } else {
+                        selectedDiscoverSourcePart = selected
+                        selectedDiscoverSource?.takeIf {
+                            it.bookSourceUrl == selected.bookSourceUrl
+                        }?.apply {
+                            bookSourceName = selected.bookSourceName
+                            bookSourceGroup = selected.bookSourceGroup
+                            bookSourceType = selected.bookSourceType
+                        }
                         updateDiscoverSourceTitle()
                         updateDiscoverLoginButtonState()
                         updateDiscoverSearchButtonState()
@@ -1562,7 +1588,7 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
                 viewLifecycleOwner.lifecycle,
                 Lifecycle.State.RESUMED,
                 AppDatabase.BOOK_SOURCE_TABLE_NAME
-            ).catch {
+            ).distinctUntilChanged(::areBookSourcePartListsSame).catch {
                 AppLog.put("发现界面更新数据出错", it)
             }.conflate().flowOn(IO).collect {
                 binding.swipeRefreshLayout.isRefreshing = false

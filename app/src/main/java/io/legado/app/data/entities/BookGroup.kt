@@ -38,6 +38,12 @@ data class BookGroup(
         const val IdVideo = -6L
         const val IdImage = -7L
         const val IdError = -11L
+
+        /** 书架 style1 顶部主分类（默认顺序） */
+        val primaryGroupIds = listOf(IdAll, IdImage, IdAudio, IdVideo)
+
+        /** 分组管理界面不展示的系统主分类 */
+        val hiddenInGroupManageIds = setOf(IdImage, IdAudio, IdVideo)
     }
 
     fun getManageName(context: Context): String {

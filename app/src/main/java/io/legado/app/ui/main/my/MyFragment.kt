@@ -365,6 +365,19 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
         }
 
         override fun onPreferenceTreeClick(preference: Preference): Boolean {
+            if (activeSearchKeyword.isNotBlank()) {
+                ownerMatchedSubItems[preference.key.orEmpty()]
+                    ?.firstOrNull()
+                    ?.let { item ->
+                        item.ownerConfigTag?.let { configTag ->
+                            startActivity<ConfigActivity> {
+                                putExtra("configTag", configTag)
+                                putExtra("targetKey", item.key)
+                            }
+                            return true
+                        }
+                    }
+            }
             when (preference.key) {
                 "bookSourceManage" -> startActivity<BookSourceActivity>()
                 "rssSourceManage" -> startActivity<RssSourceActivity>()
@@ -403,19 +416,6 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
                 "about" -> startActivity<AboutActivity>()
                 "exit" -> activity?.finish()
                 else -> Unit
-            }
-            if (activeSearchKeyword.isNotBlank()) {
-                ownerMatchedSubItems[preference.key.orEmpty()]
-                    ?.firstOrNull()
-                    ?.let { item ->
-                        item.ownerConfigTag?.let { configTag ->
-                            startActivity<ConfigActivity> {
-                                putExtra("configTag", configTag)
-                                putExtra("targetKey", item.key)
-                            }
-                            return true
-                        }
-                    }
             }
             return super.onPreferenceTreeClick(preference)
         }

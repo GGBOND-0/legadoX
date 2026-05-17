@@ -79,7 +79,9 @@ class GroupManageDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
             appDb.bookGroupDao.flowAll().catch {
                 AppLog.put("书籍分组管理界面获取分组数据失败\n${it.localizedMessage}", it)
             }.flowOn(IO).conflate().collect {
-                adapter.setItems(it)
+                adapter.setItems(
+                    it.filter { group -> group.groupId !in BookGroup.hiddenInGroupManageIds }
+                )
             }
         }
     }

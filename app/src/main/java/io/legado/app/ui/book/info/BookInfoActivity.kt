@@ -155,7 +155,11 @@ class BookInfoActivity :
 
     private val tocBatchSize = 30
     private var tocPreviewChapters: List<BookChapter> = emptyList()
-    private var tocRenderedCount = 0
+    private var tocRenderedStart = 0
+    private var tocRenderedEnd = 0
+    private var tocEdgeLoadEnabled = false
+    private var tocPrepending = false
+    private var tocAppending = false
     private var detailPanelLastHeight = -1
     private var relinkLocalBookAfterFolderSelect = false
 
@@ -999,7 +1003,8 @@ class BookInfoActivity :
         }
         tocLoadingVisible = true
         tocPreviewChapters = emptyList()
-        tocRenderedCount = 0
+        tocRenderedStart = 0
+        tocRenderedEnd = 0
         ivTocFullscreen.gone()
         showTocLoadingContent()
     }
@@ -1020,9 +1025,14 @@ class BookInfoActivity :
         tvTabToc.setOnClickListener { showDetailPage(DetailPage.TOC) }
         val tocScrollView = tocScrollView as androidx.core.widget.NestedScrollView
         tocScrollView.isNestedScrollingEnabled = false
-        tocScrollView.setOnScrollChangeListener { view, _, scrollY, _, _ ->
+        tocScrollView.setOnScrollChangeListener { view, _, scrollY, _, oldScrollY ->
+            if (!tocEdgeLoadEnabled) return@setOnScrollChangeListener
             val child = tocScrollView.getChildAt(0) ?: return@setOnScrollChangeListener
-            if (scrollY + view.height >= child.height - 48.dpToPx()) {
+            val edge = 48.dpToPx()
+            if (scrollY <= edge && scrollY <= oldScrollY) {
+                prependTocPreviewBatch()
+            }
+            if (scrollY + view.height >= child.height - edge && scrollY >= oldScrollY) {
                 appendTocPreviewBatch()
             }
         }
@@ -1067,7 +1077,8 @@ class BookInfoActivity :
     private fun renderTocPreview(chapterList: List<BookChapter>?) = binding.run {
         if (tocLoadingVisible) {
             tocPreviewChapters = emptyList()
-            tocRenderedCount = 0
+            tocRenderedStart = 0
+            tocRenderedEnd = 0
             ivTocFullscreen.gone()
             showTocLoadingContent()
             return@run
@@ -1077,38 +1088,86 @@ class BookInfoActivity :
         val currentBook = book
         if (chapters.isEmpty() || currentBook == null) {
             tocPreviewChapters = emptyList()
-            tocRenderedCount = 0
+            tocRenderedStart = 0
+            tocRenderedEnd = 0
             ivTocFullscreen.gone()
             llTocPreview.addView(tocPreviewText(getString(R.string.chapter_list_empty), false))
             return@run
         }
         ivTocFullscreen.visible()
         tocPreviewChapters = chapters
+        tocEdgeLoadEnabled = false
+        tocPrepending = false
+        tocAppending = false
+        (tocScrollView as androidx.core.widget.NestedScrollView).scrollTo(0, 0)
         val currentPosition = chapters.indexOfFirst { it.index == currentBook.durChapterIndex }
             .coerceAtLeast(0)
-        tocRenderedCount = (currentPosition - tocBatchSize / 2).coerceAtLeast(0)
+        tocRenderedStart = (currentPosition - tocBatchSize / 2).coerceAtLeast(0)
+        tocRenderedEnd = tocRenderedStart
         appendTocPreviewBatch()
         centerCurrentTocItem(currentBook.durChapterIndex)
     }
 
     private fun appendTocPreviewBatch() = binding.run {
+        if (tocAppending) return@run
         val chapters = tocPreviewChapters
-        if (chapters.isEmpty() || tocRenderedCount >= chapters.size) {
+        if (chapters.isEmpty() || tocRenderedEnd >= chapters.size) {
             return@run
         }
-        if (llTocPreview.childCount == 0) {
-            llTocPreview.removeAllViews()
-        }
         val currentBook = book ?: return@run
+        tocAppending = true
         val currentIndex = currentBook.durChapterIndex
-        val nextCount = (tocRenderedCount + tocBatchSize).coerceAtMost(chapters.size)
-        chapters.subList(tocRenderedCount, nextCount).forEach { chapter ->
+        val nextEnd = (tocRenderedEnd + tocBatchSize).coerceAtMost(chapters.size)
+        chapters.subList(tocRenderedEnd, nextEnd).forEach { chapter ->
             llTocPreview.addView(tocPreviewText(chapter.title, chapter.index == currentIndex).apply {
                 tag = chapter.index
                 setOnClickListener { openChapterDirect(chapter) }
             })
         }
-        tocRenderedCount = nextCount
+        tocRenderedEnd = nextEnd
+        tocAppending = false
+    }
+
+    private fun prependTocPreviewBatch() = binding.run {
+        if (tocPrepending) return@run
+        val chapters = tocPreviewChapters
+        if (chapters.isEmpty() || tocRenderedStart <= 0) {
+            return@run
+        }
+        val currentBook = book ?: return@run
+        val tocScrollView = tocScrollView as androidx.core.widget.NestedScrollView
+        val scrollY = tocScrollView.scrollY
+        var anchorIndex = 0
+        for (i in 0 until llTocPreview.childCount) {
+            val child = llTocPreview.getChildAt(i)
+            if (child.bottom > scrollY) {
+                anchorIndex = i
+                break
+            }
+        }
+        val anchorView = llTocPreview.getChildAt(anchorIndex)
+        val anchorOffset = anchorView.top - scrollY
+        val currentIndex = currentBook.durChapterIndex
+        val newStart = (tocRenderedStart - tocBatchSize).coerceAtLeast(0)
+        val prependCount = tocRenderedStart - newStart
+        tocPrepending = true
+        chapters.subList(newStart, tocRenderedStart).forEachIndexed { index, chapter ->
+            llTocPreview.addView(
+                tocPreviewText(chapter.title, chapter.index == currentIndex).apply {
+                    tag = chapter.index
+                    setOnClickListener { openChapterDirect(chapter) }
+                },
+                index
+            )
+        }
+        tocRenderedStart = newStart
+        llTocPreview.post {
+            tocPrepending = false
+            val newAnchorIndex = anchorIndex + prependCount
+            if (newAnchorIndex >= llTocPreview.childCount) return@post
+            val newAnchor = llTocPreview.getChildAt(newAnchorIndex)
+            tocScrollView.scrollTo(0, (newAnchor.top - anchorOffset).coerceAtLeast(0))
+        }
     }
 
     private fun centerCurrentTocItem(currentIndex: Int) = binding.run {
@@ -1117,9 +1176,14 @@ class BookInfoActivity :
             val targetView = (0 until llTocPreview.childCount)
                 .asSequence()
                 .map(llTocPreview::getChildAt)
-                .firstOrNull { it.tag == currentIndex } ?: return@post
+                .firstOrNull { it.tag == currentIndex }
+            if (targetView == null) {
+                tocEdgeLoadEnabled = true
+                return@post
+            }
             val targetTop = targetView.top - (tocScrollView.height - targetView.height) / 2
-            tocScrollView.smoothScrollTo(0, targetTop.coerceAtLeast(0))
+            tocScrollView.scrollTo(0, targetTop.coerceAtLeast(0))
+            tocScrollView.post { tocEdgeLoadEnabled = true }
         }
     }
 

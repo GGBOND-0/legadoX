@@ -398,13 +398,13 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
                         handled = false
                     }
                     "4" -> { //双击
+                        val click = column.click
                         if (doubleClick) {
-                            val click = column.click
                             if (!click.isNullOrBlank()) {
                                 callBack.clickImg(click, column.src)
                                 handled = true
                             }
-                        } else {
+                        } else if (!click.isNullOrBlank()) {
                             handled = true
                         }
                     }

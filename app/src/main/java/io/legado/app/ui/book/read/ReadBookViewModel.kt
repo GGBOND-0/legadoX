@@ -361,7 +361,10 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
     fun removeFromBookshelf(success: (() -> Unit)?) {
         val book = ReadBook.book
         Coroutine.async {
-            book?.delete()
+            book?.let {
+                BookHelp.clearCache(it)
+                it.delete()
+            }
         }.onSuccess {
             success?.invoke()
         }

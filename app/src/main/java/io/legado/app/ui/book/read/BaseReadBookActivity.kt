@@ -16,12 +16,14 @@ import androidx.core.view.updateLayoutParams
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppConst.charsets
+import io.legado.app.constant.BookType
 import io.legado.app.constant.PageAnim
 import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.ActivityBookReadBinding
 import io.legado.app.databinding.DialogDownloadChoiceBinding
 import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.databinding.DialogSimulatedReadingBinding
+import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ReadBookConfig
@@ -31,6 +33,7 @@ import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.bottomBackground
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
+import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.read.config.BgTextConfigDialog
 import io.legado.app.ui.book.read.config.ClickActionConfigDialog
 import io.legado.app.ui.book.read.config.PaddingConfigDialog
@@ -284,6 +287,17 @@ abstract class BaseReadBookActivity :
                         }
                         val end = editEnd.text!!.toString().let {
                             if (it.isEmpty()) book.totalChapterNum else it.toInt()
+                        }
+                        if (!ReadBook.inBookshelf) {
+                            book.removeType(BookType.notShelf)
+                            book.save()
+                            ReadBook.inBookshelf = true
+                            SourceCallBack.callBackBook(
+                                SourceCallBack.ADD_BOOK_SHELF,
+                                ReadBook.bookSource,
+                                ReadBook.book
+                            )
+                            setResult(RESULT_OK)
                         }
                         CacheBook.start(this@BaseReadBookActivity, book, start - 1, end - 1)
                     }

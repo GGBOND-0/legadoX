@@ -149,6 +149,32 @@ class TextChapterLayout(
 
     var channel = Channel<TextPage>(Channel.UNLIMITED)
 
+    private data class InlineColumnStyle(
+        val underline: Boolean = false,
+        val bold: Boolean = false,
+        val italic: Boolean = false,
+        val strike: Boolean = false,
+        val textSizeScale: Float = 1f,
+        val baselineShiftEm: Float = 0f
+    ) {
+        val hasStyle: Boolean
+            get() = underline || bold || italic || strike ||
+                textSizeScale != 1f || baselineShiftEm != 0f
+    }
+
+    private data class ParsedInlineText(
+        val text: String,
+        val styles: List<InlineColumnStyle?>
+    ) {
+        fun styleAt(index: Int): InlineColumnStyle? = styles.getOrNull(index)
+    }
+
+    private data class MeasuredWords(
+        val words: ArrayList<String>,
+        val widths: ArrayList<Float>,
+        val offsets: ArrayList<Int>
+    )
+
 
     init {
         job = Coroutine.async(
@@ -353,7 +379,12 @@ class TextChapterLayout(
             }
 
             // 如果是单图模式且当前页有内容，强制分页
-            if (isSingleImageStyle && pendingTextPage.lines.isNotEmpty() && contents.isNotEmpty()) {
+            val keepEpubTitleForNextImage = book.isEpub &&
+                AppConfig.epubParseMode != AppConfig.EPUB_PARSE_MODE_CLASSIC &&
+                pendingTextPage.lines.all { it.isTitle && !it.isImage }
+            if (isSingleImageStyle && pendingTextPage.lines.isNotEmpty() && contents.isNotEmpty() &&
+                !keepEpubTitleForNextImage
+            ) {
                 prepareNextPageIfNeed()
             }
         }
@@ -369,6 +400,8 @@ class TextChapterLayout(
                 val text = content.trim()
                 if (text == "[newpage]") {
                     prepareNextPageIfNeed()
+                    return@forEach
+                } else if (text == EpubFile.READABLE_CONTENT_VERSION_FLAG) {
                     return@forEach
                 } else if (text.startsWith(EpubFile.NATIVE_CONTENT_FLAG)) {
                     setTypeNativeEpubLayout(text)
@@ -519,7 +552,7 @@ class TextChapterLayout(
                     )
                 }
             }
-            pendingTextPage.lines.last().isParagraphEnd = true
+            pendingTextPage.lines.lastOrNull()?.isParagraphEnd = true
             stringBuilder.append("\n")
         }
         val chapterWordCount = StringUtils.wordCountFormat(wordCount.toString())
@@ -576,12 +609,21 @@ class TextChapterLayout(
                         width = width * visibleHeight / height
                         height = visibleHeight
                     }
-                    if (durY > 0f) {
+                    val mergeWithTitle = shouldMergeSingleImageWithTitle(src)
+                    if (mergeWithTitle) {
+                        val availableHeight = visibleHeight - durY
+                        if (availableHeight > textHeight * 4 && height > availableHeight) {
+                            width = (width * availableHeight / height).toInt()
+                            height = availableHeight.toInt()
+                        } else if (availableHeight <= textHeight * 4 && durY > 0f) {
+                            prepareNextPageIfNeed()
+                        }
+                    } else if (durY > 0f) {
                         prepareNextPageIfNeed()
                     }
 
                     // 图片竖直方向居中：调整 Y 坐标
-                    if (height < visibleHeight) {
+                    if (!mergeWithTitle && height < visibleHeight) {
                         val adjustHeight = (visibleHeight - height) / 2f
                         durY = adjustHeight // 将 Y 坐标设置为居中位置
                     }
@@ -628,6 +670,17 @@ class TextChapterLayout(
             }
         }
         durY += textHeight * paragraphSpacing / 10f
+    }
+
+    private fun shouldMergeSingleImageWithTitle(src: String): Boolean {
+        if (!book.isEpub || AppConfig.epubParseMode == AppConfig.EPUB_PARSE_MODE_CLASSIC) {
+            return false
+        }
+        val lines = pendingTextPage.lines
+        if (lines.isEmpty() || lines.any { !it.isTitle || it.isImage }) {
+            return false
+        }
+        return true
     }
 
     private suspend fun breakAfterSingleImageIfNeed() {
@@ -1913,14 +1966,24 @@ class TextChapterLayout(
         clickList: LinkedList<String?>?
     ) {
         breakAfterSingleImageIfNeed()
-        val widthsArray = allocateFloatArray(text.length)
-        textPaint.getTextWidthsCompat(text, widthsArray, reviewCharWidth)
+        val styledText = parseEpubReadableInlineStyles(text)
+        val plainText = styledText.text
+        if (plainText.isBlank()) return
+        val widthsArray = allocateFloatArray(plainText.length)
+        textPaint.getTextWidthsCompat(plainText, widthsArray, reviewCharWidth)
         val layout = if (useZhLayout) {
-            val (words, widths) = measureTextSplit(text, widthsArray)
+            val measuredWords = measureTextSplit(plainText, widthsArray)
             val indentSize = if (isFirstLine) paragraphIndent.length else 0
-            ZhLayout(text, textPaint, visibleWidth, words, widths, indentSize)
+            ZhLayout(
+                plainText,
+                textPaint,
+                visibleWidth,
+                measuredWords.words,
+                measuredWords.widths,
+                indentSize
+            )
         } else {
-            StaticLayout(text, textPaint, visibleWidth, Layout.Alignment.ALIGN_NORMAL, 0f, 0f, true)
+            StaticLayout(plainText, textPaint, visibleWidth, Layout.Alignment.ALIGN_NORMAL, 0f, 0f, true)
         }
         durY = when {
             //标题y轴居中
@@ -1962,8 +2025,13 @@ class TextChapterLayout(
             prepareNextPageIfNeed(durY + textHeight)
             val lineStart = layout.getLineStart(lineIndex)
             val lineEnd = layout.getLineEnd(lineIndex)
-            val lineText = text.substring(lineStart, lineEnd)
-            val (words, widths) = measureTextSplit(lineText, widthsArray, lineStart)
+            val lineText = plainText.substring(lineStart, lineEnd)
+            val measuredWords = measureTextSplit(lineText, widthsArray, lineStart)
+            val words = measuredWords.words
+            val widths = measuredWords.widths
+            val styles = measuredWords.offsets.map { offset ->
+                styledText.styleAt(lineStart + offset)
+            }
             val desiredWidth = widths.fastSum()
             textLine.text = lineText
             when (lineIndex) {
@@ -1971,7 +2039,7 @@ class TextChapterLayout(
                     //多行的第一行 非标题
                     addCharsToLineFirst(
                         book, absStartX, textLine, words, textPaint,
-                        desiredWidth, widths, srcList, clickList
+                        desiredWidth, widths, styles, srcList, clickList
                     )
                 }
                 layout.lineCount - 1 -> {
@@ -1988,7 +2056,7 @@ class TextChapterLayout(
                     }
                     addCharsToLineNatural(
                         book, absStartX, textLine, words,
-                        startX, !isTitle && lineIndex == 0, widths, srcList, clickList
+                        startX, !isTitle && lineIndex == 0, widths, styles, srcList, clickList
                     )
                 }
                 else -> {
@@ -2001,13 +2069,13 @@ class TextChapterLayout(
                         val startX = (visibleWidth - desiredWidth) / 2
                         addCharsToLineNatural(
                             book, absStartX, textLine, words,
-                            startX, false, widths, srcList, clickList
+                            startX, false, widths, styles, srcList, clickList
                         )
                     } else {
                         //中间行
                         addCharsToLineMiddle(
                             book, absStartX, textLine, words, textPaint,
-                            desiredWidth, 0f, widths, srcList, clickList
+                            desiredWidth, 0f, widths, styles, srcList, clickList
                         )
                     }
                 }
@@ -2026,6 +2094,137 @@ class TextChapterLayout(
             }
         }
         durY += textHeight * paragraphSpacing / 10f
+    }
+
+    private fun parseEpubReadableInlineStyles(rawText: String): ParsedInlineText {
+        if (
+            !rawText.contains(EpubFile.READABLE_CONTENT_VERSION_FLAG) &&
+            !rawText.contains(EpubFile.INLINE_STYLE_MARK)
+        ) {
+            return ParsedInlineText(rawText, List(rawText.length) { null })
+        }
+        val text = StringBuilder(rawText.length)
+        val styles = ArrayList<InlineColumnStyle?>(rawText.length)
+        var underlineCount = 0
+        var boldCount = 0
+        var italicCount = 0
+        var strikeCount = 0
+        var superCount = 0
+        var subCount = 0
+        var index = 0
+
+        fun currentStyle(): InlineColumnStyle? {
+            val script = when {
+                superCount > 0 -> 1
+                subCount > 0 -> -1
+                else -> 0
+            }
+            val style = InlineColumnStyle(
+                underline = underlineCount > 0,
+                bold = boldCount > 0,
+                italic = italicCount > 0,
+                strike = strikeCount > 0,
+                textSizeScale = if (script == 0) 1f else 0.72f,
+                baselineShiftEm = when {
+                    script > 0 -> -0.35f
+                    script < 0 -> 0.2f
+                    else -> 0f
+                }
+            )
+            return style.takeIf { it.hasStyle }
+        }
+
+        while (index < rawText.length) {
+            if (rawText.startsWith(EpubFile.READABLE_CONTENT_VERSION_FLAG, index)) {
+                index += EpubFile.READABLE_CONTENT_VERSION_FLAG.length
+                continue
+            }
+            if (rawText[index] == EpubFile.INLINE_STYLE_MARK && index + 1 < rawText.length) {
+                when (rawText[index + 1]) {
+                    'U' -> {
+                        underlineCount++
+                        index += 2
+                        continue
+                    }
+                    'u' -> {
+                        underlineCount = (underlineCount - 1).coerceAtLeast(0)
+                        index += 2
+                        continue
+                    }
+                    'B' -> {
+                        boldCount++
+                        index += 2
+                        continue
+                    }
+                    'b' -> {
+                        boldCount = (boldCount - 1).coerceAtLeast(0)
+                        index += 2
+                        continue
+                    }
+                    'I' -> {
+                        italicCount++
+                        index += 2
+                        continue
+                    }
+                    'i' -> {
+                        italicCount = (italicCount - 1).coerceAtLeast(0)
+                        index += 2
+                        continue
+                    }
+                    'S' -> {
+                        strikeCount++
+                        index += 2
+                        continue
+                    }
+                    's' -> {
+                        strikeCount = (strikeCount - 1).coerceAtLeast(0)
+                        index += 2
+                        continue
+                    }
+                    'P' -> {
+                        superCount++
+                        index += 2
+                        continue
+                    }
+                    'p' -> {
+                        superCount = (superCount - 1).coerceAtLeast(0)
+                        index += 2
+                        continue
+                    }
+                    'D' -> {
+                        subCount++
+                        index += 2
+                        continue
+                    }
+                    'd' -> {
+                        subCount = (subCount - 1).coerceAtLeast(0)
+                        index += 2
+                        continue
+                    }
+                    'L' -> {
+                        val lenStart = index + 2
+                        val lenEnd = lenStart + 4
+                        val length = if (lenEnd <= rawText.length) {
+                            rawText.substring(lenStart, lenEnd).toIntOrNull(16)
+                        } else {
+                            null
+                        }
+                        if (length != null && lenEnd + length <= rawText.length) {
+                            index = lenEnd + length
+                            continue
+                        }
+                    }
+                    'l' -> {
+                        index += 2
+                        continue
+                    }
+                }
+            }
+            text.append(rawText[index])
+            styles.add(currentStyle())
+            index++
+        }
+        return ParsedInlineText(text.toString(), styles)
     }
 
     private fun calcTextLinePosition(
@@ -2062,6 +2261,7 @@ class TextChapterLayout(
         /**自然排版长度**/
         desiredWidth: Float,
         textWidths: List<Float>,
+        textStyles: List<InlineColumnStyle?>,
         srcList: LinkedList<String>?,
         clickList: LinkedList<String?>?
     ) {
@@ -2069,7 +2269,7 @@ class TextChapterLayout(
         if (!textFullJustify) {
             addCharsToLineNatural(
                 book, absStartX, textLine, words,
-                x, true, textWidths, srcList, clickList
+                x, true, textWidths, textStyles, srcList, clickList
             )
             return
         }
@@ -2090,9 +2290,10 @@ class TextChapterLayout(
         if (words.size > bodyIndent.length) {
             val text1 = words.subList(bodyIndent.length, words.size)
             val textWidths1 = textWidths.subList(bodyIndent.length, textWidths.size)
+            val textStyles1 = textStyles.subList(bodyIndent.length, textStyles.size)
             addCharsToLineMiddle(
                 book, absStartX, textLine, text1, textPaint,
-                desiredWidth, x, textWidths1, srcList, clickList
+                desiredWidth, x, textWidths1, textStyles1, srcList, clickList
             )
         }
     }
@@ -2111,13 +2312,14 @@ class TextChapterLayout(
         /**起始x坐标**/
         startX: Float,
         textWidths: List<Float>,
+        textStyles: List<InlineColumnStyle?>,
         srcList: LinkedList<String>?,
         clickList: LinkedList<String?>?
     ) {
         if (!textFullJustify) {
             addCharsToLineNatural(
                 book, absStartX, textLine, words,
-                startX, false, textWidths, srcList,
+                startX, false, textWidths, textStyles, srcList,
                 clickList
             )
             return
@@ -2140,7 +2342,7 @@ class TextChapterLayout(
                 addCharToLine(
                     book, absStartX, textLine, char,
                     x, x1, index + 1 == words.size, srcList,
-                    clickList
+                    clickList, textStyles.getOrNull(index)
                 )
                 x = x1
             }
@@ -2157,7 +2359,7 @@ class TextChapterLayout(
                 addCharToLine(
                     book, absStartX, textLine, char,
                     x, x1, index + 1 == words.size, srcList,
-                    clickList
+                    clickList, textStyles.getOrNull(index)
                 )
                 x = x1
             }
@@ -2176,6 +2378,7 @@ class TextChapterLayout(
         startX: Float,
         hasIndent: Boolean,
         textWidths: List<Float>,
+        textStyles: List<InlineColumnStyle?>,
         srcList: LinkedList<String>?,
         clickList: LinkedList<String?>?
     ) {
@@ -2186,7 +2389,10 @@ class TextChapterLayout(
             val char = words[index]
             val cw = textWidths[index]
             val x1 = x + cw
-            addCharToLine(book, absStartX, textLine, char, x, x1, index + 1 == words.size, srcList, clickList)
+            addCharToLine(
+                book, absStartX, textLine, char, x, x1, index + 1 == words.size,
+                srcList, clickList, textStyles.getOrNull(index)
+            )
             x = x1
             if (hasIndent && index == indentLength - 1) {
                 textLine.indentWidth = x
@@ -2207,7 +2413,8 @@ class TextChapterLayout(
         xEnd: Float,
         isLineEnd: Boolean,
         srcList: LinkedList<String>?,
-        clickList: LinkedList<String?>?
+        clickList: LinkedList<String?>?,
+        style: InlineColumnStyle? = null
     ) {
         val column = when {
             !srcList.isNullOrEmpty() && (char == srcReplaceStr || char == reviewStr) -> {
@@ -2230,11 +2437,27 @@ class TextChapterLayout(
 //            }
 
             else -> {
-                TextColumn(
-                    start = absStartX + xStart,
-                    end = absStartX + xEnd,
-                    charData = char
-                )
+                if (style?.hasStyle == true) {
+                    TextHtmlColumn(
+                        start = absStartX + xStart,
+                        end = absStartX + xEnd,
+                        charData = char,
+                        mTextSize = contentPaint.textSize * style.textSizeScale,
+                        mTextColor = null,
+                        linkUrl = null,
+                        isBold = style.bold,
+                        isItalic = style.italic,
+                        isUnderline = style.underline,
+                        isStrikethrough = style.strike,
+                        baselineShift = contentPaint.textSize * style.baselineShiftEm
+                    )
+                } else {
+                    TextColumn(
+                        start = absStartX + xStart,
+                        end = absStartX + xEnd,
+                        charData = char
+                    )
+                }
             }
         }
         textLine.addColumn(column)
@@ -2309,7 +2532,7 @@ class TextChapterLayout(
         text: String,
         widthsArray: FloatArray,
         start: Int = 0
-    ): Pair<ArrayList<String>, ArrayList<Float>> {
+    ): MeasuredWords {
         val length = text.length
         var clusterCount = 0
         for (i in start..<start + length) {
@@ -2317,16 +2540,18 @@ class TextChapterLayout(
         }
         val widths = ArrayList<Float>(clusterCount)
         val stringList = ArrayList<String>(clusterCount)
+        val offsets = ArrayList<Int>(clusterCount)
         var i = 0
         while (i < length) {
             val clusterBaseIndex = i++
             widths.add(widthsArray[start + clusterBaseIndex])
+            offsets.add(clusterBaseIndex)
             while (i < length && widthsArray[start + i] == 0f && !isZeroWidthChar(text[i])) {
                 i++
             }
             stringList.add(text.substring(clusterBaseIndex, i))
         }
-        return stringList to widths
+        return MeasuredWords(stringList, widths, offsets)
     }
 
     private fun isZeroWidthChar(char: Char): Boolean {

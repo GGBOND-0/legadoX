@@ -63,6 +63,8 @@ class EpubFile(var book: Book) {
         const val NATIVE_CONTENT_FLAG = "<epub-native"
         const val NATIVE_LAYOUT_FLAG = "data-href="
         const val NATIVE_CONTENT_VERSION_FLAG = "data-native-ver=\"2\""
+        const val READABLE_CONTENT_VERSION_FLAG = "\uE10Aepub-readable-v3\uE10B"
+        const val INLINE_STYLE_MARK = '\uE10C'
         private const val NATIVE_LAYOUT_DISK_CACHE_VERSION = 5
         private const val ENABLE_EPUB_DEBUG_DUMP = false
         private val scriptBlockRegex = Regex("(?is)<script\\b[^>]*>.*?</script>")
@@ -430,32 +432,93 @@ class EpubFile(var book: Book) {
                 }
             )
         }
-        val text = elements.asSequence()
+        val lines = elements.asSequence()
             .flatMap { element -> element.readableLines().asSequence() }
             .map { it.trim() }
             .filter { it.isNotBlank() }
-            .joinToString("\n")
+            .toMutableList()
+        if (chapter.isVolume && lines.size == 1 && lines.first().isDuplicateReadableTitle(chapter.title)) {
+            lines.clear()
+        }
+        val text = lines.joinToString("\n")
         if (ENABLE_EPUB_DEBUG_DUMP) {
             dumpEpubChapterDebug(chapter, rawResources, text)
         }
-        return text
+        return READABLE_CONTENT_VERSION_FLAG + text
     }
+
+    private data class ReadableInlineStyle(
+        val underline: Boolean = false,
+        val bold: Boolean = false,
+        val italic: Boolean = false,
+        val strike: Boolean = false,
+        val script: Int = 0
+    )
 
     private fun Element.readableLines(): List<String> {
         val lines = arrayListOf<String>()
-        fun appendText(builder: StringBuilder, value: String) {
-            val normalized = value.replace(Regex("\\s+"), " ")
+        fun appendStyleStart(builder: StringBuilder, style: ReadableInlineStyle) {
+            if (style.bold) builder.append(INLINE_STYLE_MARK).append('B')
+            if (style.italic) builder.append(INLINE_STYLE_MARK).append('I')
+            if (style.underline) builder.append(INLINE_STYLE_MARK).append('U')
+            if (style.strike) builder.append(INLINE_STYLE_MARK).append('S')
+            if (style.script > 0) builder.append(INLINE_STYLE_MARK).append('P')
+            if (style.script < 0) builder.append(INLINE_STYLE_MARK).append('D')
+        }
+
+        fun appendStyleEnd(builder: StringBuilder, style: ReadableInlineStyle) {
+            if (style.script < 0) builder.append(INLINE_STYLE_MARK).append('d')
+            if (style.script > 0) builder.append(INLINE_STYLE_MARK).append('p')
+            if (style.strike) builder.append(INLINE_STYLE_MARK).append('s')
+            if (style.underline) builder.append(INLINE_STYLE_MARK).append('u')
+            if (style.italic) builder.append(INLINE_STYLE_MARK).append('i')
+            if (style.bold) builder.append(INLINE_STYLE_MARK).append('b')
+        }
+
+        fun appendText(builder: StringBuilder, value: String, style: ReadableInlineStyle) {
+            val normalized = value
+                .replace(INLINE_STYLE_MARK.toString(), "")
+                .replace(Regex("\\s+"), " ")
             if (normalized.isBlank()) return
             if (builder.isNotEmpty() && !builder.endsWith(' ') && !normalized.startsWith(' ')) {
                 builder.append(' ')
             }
+            appendStyleStart(builder, style)
             builder.append(normalized)
+            appendStyleEnd(builder, style)
         }
 
-        fun walk(node: org.jsoup.nodes.Node, builder: StringBuilder) {
+        fun Element.inlineStyle(parent: ReadableInlineStyle): ReadableInlineStyle {
+            val tag = normalName()
+            val declarations = EpubCss.declarations(attr("style"))
+            val textDecoration = listOf(
+                declarations["text-decoration"],
+                declarations["text-decoration-line"]
+            ).joinToString(" ").lowercase()
+            val fontWeight = declarations["font-weight"].orEmpty().lowercase()
+            val fontStyle = declarations["font-style"].orEmpty().lowercase()
+            val verticalAlign = declarations["vertical-align"].orEmpty().lowercase()
+            val cssBold = fontWeight == "bold" || fontWeight.toIntOrNull()?.let { it >= 600 } == true
+            val script = when {
+                tag == "sup" || verticalAlign == "super" || verticalAlign == "sup" -> 1
+                tag == "sub" || verticalAlign == "sub" -> -1
+                else -> parent.script
+            }
+            return parent.copy(
+                underline = parent.underline || tag == "u" || textDecoration.contains("underline"),
+                bold = parent.bold || tag == "b" || tag == "strong" || cssBold,
+                italic = parent.italic || tag == "i" || tag == "em" || fontStyle == "italic" || fontStyle == "oblique",
+                strike = parent.strike || tag == "s" || tag == "del" || tag == "strike" ||
+                    textDecoration.contains("line-through"),
+                script = script
+            )
+        }
+
+        fun walk(node: org.jsoup.nodes.Node, builder: StringBuilder, style: ReadableInlineStyle) {
             when (node) {
-                is org.jsoup.nodes.TextNode -> appendText(builder, node.text())
+                is org.jsoup.nodes.TextNode -> appendText(builder, node.text(), style)
                 is Element -> {
+                    val childStyle = node.inlineStyle(style)
                     when (node.normalName()) {
                         "title", "script", "style" -> return
                         "br" -> {
@@ -475,7 +538,7 @@ class EpubFile(var book: Book) {
                                 lines.add(builder.toString().trim())
                                 builder.setLength(0)
                             }
-                            node.childNodes().forEach { child -> walk(child, builder) }
+                            node.childNodes().forEach { child -> walk(child, builder, childStyle) }
                             if (node.isReadableBlock()) {
                                 builder.toString().trim().takeIf { it.isNotBlank() }?.let { lines.add(it) }
                                 builder.setLength(0)
@@ -488,7 +551,7 @@ class EpubFile(var book: Book) {
 
         cleanReadableEpubElement(this)
         val builder = StringBuilder()
-        childNodes().forEach { child -> walk(child, builder) }
+        childNodes().forEach { child -> walk(child, builder, ReadableInlineStyle()) }
         builder.toString().trim().takeIf { it.isNotBlank() }?.let { lines.add(it) }
         return lines
     }
@@ -501,6 +564,22 @@ class EpubFile(var book: Book) {
             "ol", "p", "pre", "section", "table", "tbody", "td", "tfoot", "th",
             "thead", "tr", "ul"
         )
+    }
+
+    private fun String.isDuplicateReadableTitle(title: String): Boolean {
+        fun String.normalizedTitleText(): String {
+            return replace(INLINE_STYLE_MARK.toString(), "")
+                .replace(READABLE_CONTENT_VERSION_FLAG, "")
+                .replace(Regex("\\s+"), "")
+                .replace(Regex("[　\\p{Punct}，。！？、；：“”‘’（）《》〈〉【】［］〔〕—…·]"), "")
+                .lowercase(Locale.ROOT)
+        }
+        val contentTitle = normalizedTitleText()
+        val chapterTitle = title.normalizedTitleText()
+        if (contentTitle.isBlank() || chapterTitle.isBlank()) return false
+        return contentTitle == chapterTitle ||
+            contentTitle.contains(chapterTitle) ||
+            chapterTitle.contains(contentTitle)
     }
 
     private fun cleanReadableEpubElement(element: Element) {

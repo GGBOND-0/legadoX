@@ -28,7 +28,8 @@ data class TextHtmlColumn(
     val isItalic: Boolean = false,
     val isUnderline: Boolean = false,
     val isStrikethrough: Boolean = false,
-    val backgroundColor: Int? = null
+    val backgroundColor: Int? = null,
+    val baselineShift: Float = 0f
 ) : TextBaseColumn {
 
     override var textLine: TextLine = emptyTextLine
@@ -58,10 +59,10 @@ data class TextHtmlColumn(
                 }
             }
             field = value
-        }
+    }
 
     override fun draw(view: ContentTextView, canvas: Canvas) {
-        val y = textLine.lineBase - textLine.lineTop
+        val y = textLine.lineBase - textLine.lineTop + baselineShift
         if (linkUrl != null) {
             textPaint.run {
                 color = ReadBookConfig.textAccentColor

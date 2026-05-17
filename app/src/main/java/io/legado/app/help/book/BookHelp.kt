@@ -430,7 +430,8 @@ object BookHelp {
                         !string.contains(EpubFile.NATIVE_LAYOUT_FLAG) ||
                         !string.contains(EpubFile.NATIVE_CONTENT_VERSION_FLAG)
                 else -> string.contains(EpubFile.NATIVE_CONTENT_FLAG) ||
-                    string.contains("<usehtml", ignoreCase = true)
+                    string.contains("<usehtml", ignoreCase = true) ||
+                    !string.contains(EpubFile.READABLE_CONTENT_VERSION_FLAG)
             }
             if (needRefreshEpubContent) {
                 val epubContent = LocalBook.getContent(book, bookChapter)

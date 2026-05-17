@@ -51,9 +51,8 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
     private var selectedSecondaryGroupId = 0L
     private val groupBooksCache = hashMapOf<Long, List<Book>>()
     private var currentGroupIndex = 0
-    private var orderedGroups = listOf<BookGroup>()
 
-    override val groupId: Long get() = selectedPrimaryGroup?.groupId ?: BookGroup.IdAll
+    override val groupId: Long get() = selectedPrimaryGroup?.groupId ?: BookGroup.IdPrimaryAll
 
     override val books: List<Book>
         get() = fragmentMap[selectedSecondaryGroupId]?.getBooks() ?: emptyList()
@@ -129,11 +128,7 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
 
     @Synchronized
     override fun upGroup(data: List<BookGroup>) {
-        orderedGroups = data
-        if (data.isEmpty()) {
-            appDb.bookGroupDao.enableGroup(BookGroup.IdAll)
-        }
-        val newPrimaryGroups = buildPrimaryGroups(data)
+        val newPrimaryGroups = buildPrimaryGroups()
         val newSecondaryGroups = buildSecondaryGroups(data)
         if (newPrimaryGroups != primaryGroups || newSecondaryGroups != secondaryGroups) {
             primaryGroups.clear()
@@ -225,12 +220,14 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
     }
 
     private fun secondaryGroupName(groupId: Long): String {
-        return when (groupId) {
-            BookGroup.IdAll -> getString(R.string.bookshelf_tag_all)
-            BookGroup.IdUngrouped -> getString(R.string.no_group)
-            else -> secondaryGroups.firstOrNull { it.groupId == groupId }?.groupName
-                ?: getString(R.string.bookshelf_tag_all)
-        }
+        return secondaryGroups.firstOrNull { it.groupId == groupId }?.groupName
+            ?: when (groupId) {
+                BookGroup.IdAll -> getString(R.string.bookshelf_tag_all)
+                BookGroup.IdLocal -> getString(R.string.local)
+                BookGroup.IdUngrouped -> getString(R.string.no_group)
+                BookGroup.IdError -> getString(R.string.update_book_fail)
+                else -> getString(R.string.bookshelf_tag_all)
+            }
     }
 
     private fun showGroupSwitchMenu(anchor: View) {
@@ -290,24 +287,13 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
                 primaryBooks.any { book -> book.isInSecondaryGroup(group.groupId, userGroupIds) }
             }
         }
-        val allTagGroup = secondaryAllTagGroup()
-        secondaryGroupIds = (listOf(allTagGroup) + visibleSecondaryGroups)
+        secondaryGroupIds = visibleSecondaryGroups
             .sortedWith(compareBy({ it.order }, { it.groupId }))
             .map { it.groupId }
     }
 
-    private fun secondaryAllTagGroup(): BookGroup {
-        return orderedGroups.firstOrNull { it.groupId == BookGroup.IdAll }
-            ?: primaryGroups.firstOrNull { it.groupId == BookGroup.IdAll }
-            ?: defaultPrimaryGroup(BookGroup.IdAll)
-    }
-
-    private fun buildPrimaryGroups(data: List<BookGroup>): List<BookGroup> {
-        val groups = data.filter { it.groupId in BookGroup.primaryGroupIds }
-        if (groups.isNotEmpty()) {
-            return groups
-        }
-        return listOf(defaultPrimaryGroup(BookGroup.IdAll))
+    private fun buildPrimaryGroups(): List<BookGroup> {
+        return BookGroup.primaryGroupIds.map { defaultPrimaryGroup(it) }
     }
 
     private fun buildSecondaryGroups(data: List<BookGroup>): List<BookGroup> {
@@ -331,6 +317,7 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
         return BookGroup(
             groupId = groupId,
             groupName = when (groupId) {
+                BookGroup.IdNovel -> getString(R.string.novel)
                 BookGroup.IdImage -> getString(R.string.manga)
                 BookGroup.IdAudio -> getString(R.string.audio)
                 BookGroup.IdVideo -> getString(R.string.video)
@@ -366,7 +353,7 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
         }
 
         override fun getItem(position: Int): Fragment {
-            val group = selectedPrimaryGroup ?: defaultPrimaryGroup(BookGroup.IdAll)
+            val group = selectedPrimaryGroup ?: defaultPrimaryGroup(BookGroup.IdPrimaryAll)
             val secondaryGroupId = secondaryGroupIds.getOrNull(position) ?: BookGroup.IdAll
             onlyUpdateRead = group.onlyUpdateRead
             return BooksFragment(position, group, secondaryGroupId)

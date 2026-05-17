@@ -21,6 +21,8 @@ interface BookDao {
     fun flowByGroup(groupId: Long): Flow<List<Book>> {
         return when (groupId) {
             BookGroup.IdRoot -> flowRoot()
+            BookGroup.IdPrimaryAll -> flowAll()
+            BookGroup.IdNovel -> flowText()
             BookGroup.IdAll -> flowAll()
             BookGroup.IdLocal -> flowLocal()
             BookGroup.IdAudio -> flowAudio()
@@ -46,6 +48,9 @@ interface BookDao {
 
     @Query("SELECT * FROM books order by durChapterTime desc")
     fun flowAll(): Flow<List<Book>>
+
+    @Query("SELECT * FROM books WHERE type & ${BookType.text} > 0")
+    fun flowText(): Flow<List<Book>>
 
     @Query("SELECT * FROM books WHERE type & ${BookType.audio} > 0")
     fun flowAudio(): Flow<List<Book>>

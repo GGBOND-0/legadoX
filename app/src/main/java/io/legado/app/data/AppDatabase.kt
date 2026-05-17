@@ -200,19 +200,11 @@ abstract class AppDatabase : RoomDatabase() {
                 """.trimIndent()
                 db.execSQL(insertBookGroupLocalSql)
                 @Language("sql")
-                val insertBookGroupMusicSql = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdAudio}, '音频', -7, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdAudio})
+                val deletePrimaryBookGroupsSql = """
+                    delete from book_groups
+                    where groupId in (${BookGroup.IdImage}, ${BookGroup.IdAudio}, ${BookGroup.IdVideo})
                 """.trimIndent()
-                db.execSQL(insertBookGroupMusicSql)
-                @Language("sql")
-                val insertBookGroupImageSql = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdImage}, '${appCtx.getString(R.string.manga)}', -8, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdImage})
-                """.trimIndent()
-                db.execSQL(insertBookGroupImageSql)
+                db.execSQL(deletePrimaryBookGroupsSql)
                 @Language("sql")
                 val insertBookGroupUngroupedSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
@@ -227,13 +219,6 @@ abstract class AppDatabase : RoomDatabase() {
                 @Language("sql")
                 val deleteBookGroupLocalNoneSql = "delete from book_groups where groupId = -5"
                 db.execSQL(deleteBookGroupLocalNoneSql)
-                @Language("sql")
-                val insertBookGroupVideoSql = """
-                    insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdVideo}, '视频', -6, 1
-                    where not exists (select * from book_groups where groupId = ${BookGroup.IdVideo})
-                    """.trimIndent()
-                db.execSQL(insertBookGroupVideoSql)
                 @Language("sql")
                 val insertBookGroupErrorSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 

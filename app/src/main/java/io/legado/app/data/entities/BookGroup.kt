@@ -31,6 +31,8 @@ data class BookGroup(
 
     companion object {
         const val IdRoot = -100L
+        const val IdPrimaryAll = -101L
+        const val IdNovel = -102L
         const val IdAll = -1L
         const val IdLocal = -2L
         const val IdAudio = -3L
@@ -40,7 +42,7 @@ data class BookGroup(
         const val IdError = -11L
 
         /** 书架 style1 顶部主分类（默认顺序） */
-        val primaryGroupIds = listOf(IdAll, IdImage, IdAudio, IdVideo)
+        val primaryGroupIds = listOf(IdPrimaryAll, IdNovel, IdImage, IdAudio, IdVideo)
 
         /** 分组管理界面不展示的系统主分类 */
         val hiddenInGroupManageIds = setOf(IdImage, IdAudio, IdVideo)

@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.text.TextPaint
 import android.util.Size
+import io.legado.app.model.Debug
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import java.util.Locale
 
@@ -86,11 +87,18 @@ internal class EpubLayoutEngine(
                 flushPageIfNeeded(force = true)
             }
         }
-        val marginTop = style.verticalLengthPx("margin-top", width)
-        val marginBottom = style.verticalLengthPx("margin-bottom", width)
+        var marginTop = style.verticalLengthPx("margin-top", width)
+        var marginBottom = style.verticalLengthPx("margin-bottom", width)        
         val padding = style.boxPadding(width)
         val paddingTop = padding.top
         val paddingBottom = padding.bottom
+
+        if (node.isHeadingLike()) {
+            val maxTitleMargin = style.fontSizePx() * 0.3f
+            marginTop = marginTop.coerceAtMost(maxTitleMargin)
+            marginBottom = marginBottom.coerceAtMost(maxTitleMargin)
+        }
+
         val paddingLeft = padding.left
         val paddingRight = padding.right
         val requestedWidth = style.resolveHorizontalSize(width)
@@ -1409,6 +1417,15 @@ internal class EpubLayoutEngine(
         }
         if (declarations.size == style.declarations.size) return this
         return copy(style = EpubComputedStyle(declarations))
+    }
+
+    private fun EpubBlockNode.isHeadingLike(): Boolean {
+        val cls = attributes["class"].orEmpty().lowercase(Locale.ROOT)
+        val epubType = attributes["epub:type"].orEmpty().lowercase(Locale.ROOT)
+
+        return tagName in setOf("h1", "h2", "h3", "h4", "h5", "h6") ||
+            cls.contains("title") ||
+            epubType.contains("title")
     }
 
     private fun List<EpubDrawCommand>.fitTableCell(

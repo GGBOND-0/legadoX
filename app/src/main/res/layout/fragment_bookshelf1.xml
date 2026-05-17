@@ -166,10 +166,33 @@
 
         </FrameLayout>
 
-        <io.legado.app.ui.widget.RoundedTagBarView
-            android:id="@+id/tab_layout"
+        <LinearLayout
+            android:id="@+id/tab_bar_content"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <io.legado.app.ui.widget.RoundedTagBarView
+                android:id="@+id/tab_layout"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+
+            <androidx.appcompat.widget.AppCompatImageButton
+                android:id="@+id/btn_secondary_tags_expand"
+                android:layout_width="@dimen/bookshelf_action_button_size"
+                android:layout_height="@dimen/bookshelf_action_button_size"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_discover_embedded_action"
+                android:contentDescription="@string/expand"
+                android:padding="@dimen/bookshelf_action_button_padding"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_arrow_drop_down"
+                android:tint="@color/primaryText"
+                android:visibility="gone" />
+
+        </LinearLayout>
 
     </FrameLayout>
 

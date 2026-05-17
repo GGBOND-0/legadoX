@@ -1,14 +1,7 @@
 package io.legado.app.ui.main.rss
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.res.Configuration
-import android.content.res.ColorStateList
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.text.TextUtils
-import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.SubMenu
@@ -18,16 +11,9 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.Space
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.AppCompatImageButton
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
-import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.commit
@@ -45,13 +31,11 @@ import io.legado.app.databinding.FragmentRssBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.source.sortUrls
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.lib.theme.UiCorner
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.applyUiBodyTypeface
 import io.legado.app.lib.theme.applyUiTitleTypeface
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
-import io.legado.app.lib.theme.secondaryTextColor
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.main.MainFragmentInterface
 import io.legado.app.ui.rss.article.ReadRecordDialog
@@ -63,6 +47,7 @@ import io.legado.app.ui.rss.read.ReadRssActivity
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.rss.source.manage.RssSourceActivity
 import io.legado.app.ui.widget.dialog.VariableDialog
+import io.legado.app.ui.widget.ExpandableTagSelector
 import io.legado.app.ui.widget.RoundedTagBarView
 import io.legado.app.utils.applyMainBottomBarPadding
 import io.legado.app.utils.applyStatusBarPadding
@@ -122,9 +107,8 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
     private var selectedRssSource: RssSource? = null
     private val rssSources = mutableListOf<RssSource>()
     private val currentSorts = mutableListOf<Pair<String, String>>()
-    private val rssTagRows = mutableListOf<RoundedTagBarView>()
+    private var rssTagBar: RoundedTagBarView? = null
     private var selectedTagIndex = 0
-    private var maxTagsPerRow = 10
     private var currentSearchKey: String? = null
     private var usingModernRss = false
     private var webSourceVersion = 0L
@@ -658,7 +642,7 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
 
     private fun renderRssTabs() {
         binding.llRssTagsContainer.removeAllViews()
-        rssTagRows.clear()
+        rssTagBar = null
         val hasVisibleTags = currentSorts.size > 1 ||
             (currentSorts.size == 1 && currentSorts.first().first.isNotBlank())
         if (!hasVisibleTags) {
@@ -667,99 +651,56 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
         }
         binding.llRssTagsContainer.visible()
         selectedTagIndex = selectedTagIndex.coerceIn(0, currentSorts.lastIndex)
-        var rowCount = when {
-            currentSorts.size <= 10 -> 1
-            currentSorts.size <= 20 -> 2
-            else -> 3
+        val rowLayout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
         }
-        if (rowCount > 1 && resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            rowCount--
+        val tagBar = RoundedTagBarView(requireContext()).apply {
+            setOnTagClickListener { index ->
+                if (index == selectedTagIndex) return@setOnTagClickListener
+                selectedTagIndex = index
+                updateRssTabSelection(smooth = true)
+                renderCurrentSort()
+            }
+            submitItems(
+                currentSorts.mapIndexed { index, sort ->
+                    RoundedTagBarView.Item(sort.first.ifBlank { "${index + 1}" }, showFullText = true)
+                },
+                selectedTagIndex
+            )
         }
-        maxTagsPerRow = (currentSorts.size + rowCount - 1) / rowCount
-        currentSorts.chunked(maxTagsPerRow).forEachIndexed { rowIndex, rowItems ->
-            val rowLayout = LinearLayout(requireContext()).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-            }
-            val tagBar = RoundedTagBarView(requireContext()).apply {
-                setOnTagClickListener { index ->
-                    val globalIndex = rowIndex * maxTagsPerRow + index
-                    if (globalIndex == selectedTagIndex) return@setOnTagClickListener
-                    selectedTagIndex = globalIndex
-                    updateRssTabSelection(smooth = true)
-                    renderCurrentSort()
-                }
-                submitItems(
-                    rowItems.map { RoundedTagBarView.Item(it.first, showFullText = true) },
-                    selectedTagIndex.takeIf {
-                        it in (rowIndex * maxTagsPerRow) until (rowIndex * maxTagsPerRow + rowItems.size)
-                    }?.let { it - rowIndex * maxTagsPerRow } ?: RecyclerView.NO_POSITION
-                )
-            }
-            rssTagRows.add(tagBar)
+        rssTagBar = tagBar
+        rowLayout.addView(
+            tagBar,
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+        )
+        if (currentSorts.size >= ExpandableTagSelector.EXPAND_THRESHOLD) {
             rowLayout.addView(
-                tagBar,
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
-            )
-            if (rowIndex == 0 && currentSorts.size >= 9) {
-                rowLayout.addView(createRssTagsExpandButton())
-            }
-            binding.llRssTagsContainer.addView(
-                rowLayout,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    resources.getDimensionPixelSize(R.dimen.bookshelf_tag_bar_height)
-                ).apply {
-                    if (rowIndex > 0) topMargin = 6.dpToPx()
+                ExpandableTagSelector.createExpandButton(requireContext()) {
+                    showRssTagsSelector()
                 }
             )
         }
-    }
-
-    private fun createRssTagsExpandButton(): AppCompatImageButton {
-        return AppCompatImageButton(requireContext()).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                resources.getDimensionPixelSize(R.dimen.bookshelf_action_button_size),
-                resources.getDimensionPixelSize(R.dimen.bookshelf_action_button_size)
-            ).apply {
-                marginStart = 6.dpToPx()
-            }
-            setBackgroundResource(R.drawable.bg_discover_embedded_action)
-            contentDescription = getString(R.string.expand)
-            setPadding(
-                resources.getDimensionPixelSize(R.dimen.bookshelf_action_button_padding),
-                resources.getDimensionPixelSize(R.dimen.bookshelf_action_button_padding),
-                resources.getDimensionPixelSize(R.dimen.bookshelf_action_button_padding),
-                resources.getDimensionPixelSize(R.dimen.bookshelf_action_button_padding)
+        binding.llRssTagsContainer.addView(
+            rowLayout,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                resources.getDimensionPixelSize(R.dimen.bookshelf_tag_bar_height)
             )
-            scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-            setImageResource(R.drawable.ic_arrow_drop_down)
-            setColorFilter(primaryTextColor)
-            setOnClickListener {
-                showRssTagsSelector()
-            }
-        }
+        )
     }
 
     private fun updateRssTabSelection(smooth: Boolean) {
-        rssTagRows.forEachIndexed { rowIndex, tagBar ->
-            val start = rowIndex * maxTagsPerRow
-            val end = start + (currentSorts.size - start).coerceAtMost(maxTagsPerRow)
-            val localIndex = if (selectedTagIndex in start until end) {
-                selectedTagIndex - start
-            } else {
-                RecyclerView.NO_POSITION
-            }
-            tagBar.setSelectedIndex(localIndex, smooth)
-        }
+        rssTagBar?.setSelectedIndex(selectedTagIndex, smooth)
     }
 
     private fun showRssTagsSelector() {
         if (currentSorts.isEmpty()) return
-        showRssTagGridDialog(
+        ExpandableTagSelector.show(
+            context = requireContext(),
             title = getString(R.string.select),
             items = currentSorts.mapIndexed { index, sort ->
-                RssGridItem(
+                ExpandableTagSelector.GridItem(
                     text = sort.first.ifBlank { "${index + 1}" },
                     selected = index == selectedTagIndex,
                     value = index
@@ -773,152 +714,6 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss), MainF
             }
         }
     }
-
-    private fun showRssTagGridDialog(
-        title: CharSequence,
-        items: List<RssGridItem>,
-        onSelected: (Int) -> Unit
-    ) {
-        val context = requireContext()
-        val root = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundResource(R.drawable.bg_book_info_intro_panel)
-            clipToOutline = true
-        }
-        val titleView = TextView(context).apply {
-            text = title
-            applyUiTitleTypeface(context)
-            setTextColor(context.primaryTextColor)
-            textSize = 18f
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(16.dpToPx(), 0, 16.dpToPx(), 0)
-            setBackgroundColor(context.primaryColor)
-        }
-        root.addView(
-            titleView,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                48.dpToPx()
-            )
-        )
-        val content = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(12.dpToPx(), 10.dpToPx(), 12.dpToPx(), 12.dpToPx())
-            applyUiBodyTypeface(context)
-        }
-        var dialog: AlertDialog? = null
-        var row = createRssGridRow(context)
-        var usedSpan = 0
-        fun addRowIfNeeded() {
-            if (row.childCount > 0) {
-                if (usedSpan < 3) {
-                    row.addView(Space(context), LinearLayout.LayoutParams(0, 1, (3 - usedSpan).toFloat()))
-                }
-                content.addView(row)
-            }
-            row = createRssGridRow(context)
-            usedSpan = 0
-        }
-        items.forEach { item ->
-            val span = rssGridSpan(item.text)
-            if (usedSpan > 0 && usedSpan + span > 3) {
-                addRowIfNeeded()
-            }
-            val itemView = createRssGridItemView(item, span).apply {
-                setOnClickListener {
-                    dialog?.dismiss()
-                    onSelected(item.value)
-                }
-            }
-            row.addView(
-                itemView,
-                LinearLayout.LayoutParams(
-                    0,
-                    if (span == 3) LinearLayout.LayoutParams.WRAP_CONTENT else 44.dpToPx(),
-                    span.toFloat()
-                ).apply {
-                    setMargins(4.dpToPx(), 6.dpToPx(), 4.dpToPx(), 6.dpToPx())
-                }
-            )
-            usedSpan += span
-            if (usedSpan == 3) {
-                addRowIfNeeded()
-            }
-        }
-        addRowIfNeeded()
-        root.addView(
-            ScrollView(context).apply { addView(content) },
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
-        val dialogView = FrameLayout(context).apply {
-            setPadding(16.dpToPx(), 16.dpToPx(), 16.dpToPx(), 16.dpToPx())
-            addView(
-                root,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT
-                )
-            )
-            applyUiBodyTypeface(context)
-        }
-        dialog = AlertDialog.Builder(context)
-            .setView(dialogView)
-            .show()
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-    }
-
-    private fun createRssGridRow(context: Context): LinearLayout {
-        return LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-    }
-
-    private fun createRssGridItemView(item: RssGridItem, span: Int): TextView {
-        val context = requireContext()
-        return TextView(context).apply {
-            text = item.text
-            applyUiBodyTypeface(context)
-            isSelected = item.selected
-            minHeight = 44.dpToPx()
-            includeFontPadding = false
-            gravity = Gravity.CENTER
-            textSize = 14f
-            setPadding(14.dpToPx(), 8.dpToPx(), 14.dpToPx(), 8.dpToPx())
-            maxLines = if (span == 3) Int.MAX_VALUE else 1
-            ellipsize = if (span == 3) null else TextUtils.TruncateAt.END
-            setTextColor(
-                ColorStateList(
-                    arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()),
-                    intArrayOf(context.accentColor, context.primaryTextColor)
-                )
-            )
-            background = UiCorner.actionSelector(
-                Color.TRANSPARENT,
-                ContextCompat.getColor(context, R.color.background_card),
-                UiCorner.actionRadius(context)
-            )
-        }
-    }
-
-    private fun rssGridSpan(text: CharSequence): Int {
-        val count = text.toString().let { it.codePointCount(0, it.length) }
-        return when {
-            count > 8 -> 3
-            count > 4 -> 2
-            else -> 1
-        }
-    }
-
-    private data class RssGridItem(
-        val text: CharSequence,
-        val selected: Boolean,
-        val value: Int
-    )
 
     private fun renderCurrentSort() {
         val source = selectedRssSource ?: return

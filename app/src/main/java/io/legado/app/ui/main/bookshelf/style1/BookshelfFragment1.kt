@@ -23,6 +23,7 @@ import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.main.bookshelf.BaseBookshelfFragment
 import io.legado.app.ui.main.bookshelf.style1.books.BooksFragment
+import io.legado.app.ui.widget.ExpandableTagSelector
 import io.legado.app.ui.widget.ModernActionPopup
 import io.legado.app.ui.widget.RoundedTagBarView
 import io.legado.app.utils.applyStatusBarPadding
@@ -89,6 +90,10 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
         val iconColor = ContextCompat.getColor(requireContext(), R.color.primaryText)
         binding.btnMore.setColorFilter(iconColor)
         binding.ivBookshelfTitleArrow.setColorFilter(iconColor)
+        ExpandableTagSelector.configureExpandButton(binding.btnSecondaryTagsExpand)
+        binding.btnSecondaryTagsExpand.setOnClickListener {
+            showSecondaryGroupSelector()
+        }
         binding.tabLayout.setOnTagClickListener { index ->
             val secondaryGroupId = secondaryGroupIds.getOrNull(index) ?: BookGroup.IdAll
             if (secondaryGroupId == selectedSecondaryGroupId) {
@@ -152,6 +157,7 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
         binding.viewPagerBookshelf.post {
             if (primaryGroups.isEmpty()) {
                 binding.tabLayout.submitItems(emptyList(), -1)
+                binding.btnSecondaryTagsExpand.visibility = View.GONE
                 updateHeaderTitle()
                 return@post
             }
@@ -205,6 +211,12 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
             },
             secondaryGroupIds.indexOf(selectedSecondaryGroupId).takeIf { it >= 0 } ?: 0
         )
+        binding.btnSecondaryTagsExpand.visibility =
+            if (secondaryGroupIds.size >= ExpandableTagSelector.EXPAND_THRESHOLD) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
     }
 
     private fun switchToSecondaryGroup(index: Int, smooth: Boolean) {
@@ -217,6 +229,24 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
         selectedSecondaryGroupId = secondaryGroupId
         binding.tabLayout.setSelectedIndex(index, smooth = smooth)
         binding.viewPagerBookshelf.setCurrentItem(index, smooth)
+    }
+
+    private fun showSecondaryGroupSelector() {
+        if (secondaryGroupIds.size < ExpandableTagSelector.EXPAND_THRESHOLD) return
+        val selectedIndex = secondaryGroupIds.indexOf(selectedSecondaryGroupId)
+        ExpandableTagSelector.show(
+            context = requireContext(),
+            title = getString(R.string.select),
+            items = secondaryGroupIds.mapIndexed { index, groupId ->
+                ExpandableTagSelector.GridItem(
+                    text = secondaryGroupName(groupId),
+                    selected = index == selectedIndex,
+                    value = index
+                )
+            }
+        ) { index ->
+            switchToSecondaryGroup(index, smooth = true)
+        }
     }
 
     private fun secondaryGroupName(groupId: Long): String {

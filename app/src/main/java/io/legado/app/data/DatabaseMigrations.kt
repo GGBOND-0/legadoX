@@ -20,8 +20,38 @@ object DatabaseMigrations {
             migration_31_32, migration_32_33, migration_33_34, migration_34_35,
             migration_35_36, migration_36_37, migration_37_38, migration_38_39,
             migration_39_40, migration_40_41, migration_41_42, migration_42_43,
-            migration_90_91,
+            migration_90_91, migration_91_92,
         )
+    }
+
+    private val migration_91_92 = object : Migration(91, 92) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `readRecord92` (
+                    `deviceId` TEXT NOT NULL,
+                    `bookName` TEXT NOT NULL,
+                    `readTime` INTEGER NOT NULL DEFAULT 0,
+                    `lastRead` INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY(`deviceId`, `bookName`)
+                )
+                """
+            )
+            db.execSQL(
+                """
+                INSERT OR REPLACE INTO `readRecord92` (`deviceId`, `bookName`, `readTime`, `lastRead`)
+                SELECT
+                    CASE WHEN `deviceId` = '' THEN '${AppConst.androidId}' ELSE `deviceId` END AS `deviceId`,
+                    `bookName`,
+                    MAX(`readTime`) AS `readTime`,
+                    MAX(`lastRead`) AS `lastRead`
+                FROM `readRecord`
+                GROUP BY CASE WHEN `deviceId` = '' THEN '${AppConst.androidId}' ELSE `deviceId` END, `bookName`
+                """
+            )
+            db.execSQL("DROP TABLE `readRecord`")
+            db.execSQL("ALTER TABLE `readRecord92` RENAME TO `readRecord`")
+        }
     }
 
     private val migration_90_91 = object : Migration(90, 91) {

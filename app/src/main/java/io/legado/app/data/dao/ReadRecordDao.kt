@@ -38,6 +38,9 @@ interface ReadRecordDao {
     @Query("select readTime from readRecord where deviceId = :androidId and bookName = :bookName")
     fun getReadTime(androidId: String, bookName: String): Long?
 
+    @Query("select * from readRecord where deviceId = :deviceId and bookName = :bookName limit 1")
+    fun getRecord(deviceId: String, bookName: String): ReadRecord?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(vararg readRecord: ReadRecord)
 

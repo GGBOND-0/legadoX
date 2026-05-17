@@ -21,6 +21,7 @@ import io.legado.app.data.entities.DictRule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.KeyboardAssist
 import io.legado.app.data.entities.ReadRecord
+import io.legado.app.data.entities.ReadRecordDaily
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.RssStar
@@ -192,16 +193,12 @@ object Restore {
         }
         fileToListT<ReadRecord>(path, "readRecord.json")?.let {
             it.forEach { readRecord ->
-                //判断是不是本机记录
-                if (readRecord.deviceId != androidId) {
-                    appDb.readRecordDao.insert(readRecord)
-                } else {
-                    val time = appDb.readRecordDao
-                        .getReadTime(readRecord.deviceId, readRecord.bookName)
-                    if (time == null || time < readRecord.readTime) {
-                        appDb.readRecordDao.insert(readRecord)
-                    }
-                }
+                mergeReadRecord(readRecord)
+            }
+        }
+        fileToListT<ReadRecordDaily>(path, "readRecordDaily.json")?.let {
+            it.forEach { record ->
+                mergeReadRecordDaily(record)
             }
         }
         File(path, "servers.json").takeIf {
@@ -359,6 +356,37 @@ object Restore {
             appCtx.toastOnUi("$fileName\n读取文件出错\n${e.localizedMessage}")
         }
         return null
+    }
+
+    private fun mergeReadRecord(readRecord: ReadRecord) {
+        val normalized = readRecord.copy(
+            deviceId = readRecord.deviceId.ifBlank { androidId }
+        )
+        val current = appDb.readRecordDao.getRecord(normalized.deviceId, normalized.bookName)
+        if (current == null) {
+            appDb.readRecordDao.insert(normalized)
+            return
+        }
+        appDb.readRecordDao.insert(
+            current.copy(
+                readTime = maxOf(current.readTime, normalized.readTime),
+                lastRead = maxOf(current.lastRead, normalized.lastRead)
+            )
+        )
+    }
+
+    private fun mergeReadRecordDaily(record: ReadRecordDaily) {
+        val current = appDb.readRecordDailyDao.get(record.date)
+        if (current == null) {
+            appDb.readRecordDailyDao.insert(record)
+            return
+        }
+        appDb.readRecordDailyDao.insert(
+            current.copy(
+                readTime = maxOf(current.readTime, record.readTime),
+                updatedAt = maxOf(current.updatedAt, record.updatedAt)
+            )
+        )
     }
 
     private fun fileToBookList(path: String): List<Book>? {

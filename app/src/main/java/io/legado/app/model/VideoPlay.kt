@@ -14,6 +14,7 @@ import com.shuyu.gsyvideoplayer.utils.CommonUtil
 import com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer
 import com.shuyu.gsyvideoplayer.video.base.GSYBaseVideoPlayer
 import io.legado.app.R
+import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.SourceType
@@ -23,15 +24,19 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.ReadRecentBook
+import io.legado.app.data.entities.ReadRecord
 import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.RssStar
 import io.legado.app.exception.ContentEmptyException
 import io.legado.app.help.CacheManager
+import io.legado.app.help.ReadRecordDailyHelper
 import io.legado.app.help.book.getDanmaku
 import io.legado.app.help.book.update
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.exoplayer.ExoPlayerHelper
+import io.legado.app.help.globalExecutor
 import io.legado.app.help.gsyVideo.ExoVideoManager
 import io.legado.app.help.gsyVideo.ExoVideoManager.Companion.FULLSCREEN_ID
 import io.legado.app.help.gsyVideo.FloatingPlayer
@@ -135,6 +140,8 @@ object VideoPlay : CoroutineScope by MainScope(){
     var rssStar: RssStar? = null
     /**  订阅历史记录,收藏优先  **/
     var rssRecord: RssReadRecord? = null
+    private val readRecord = ReadRecord()
+    var readStartTime: Long = System.currentTimeMillis()
     /**  弹幕相关  **/
     var danmakuFile: File? = null
     var danmakuStr: String? = null
@@ -474,6 +481,7 @@ object VideoPlay : CoroutineScope by MainScope(){
      * 暂停播放
      */
     fun onPause() {
+        upReadTime()
         if (videoManager.listener() != null) {
             videoManager.listener().onVideoPause()
         }
@@ -483,6 +491,7 @@ object VideoPlay : CoroutineScope by MainScope(){
      * 恢复播放
      */
     fun onResume() {
+        markReadStart()
         if (videoManager.listener() != null) {
             videoManager.listener().onVideoResume()
         }
@@ -494,6 +503,7 @@ object VideoPlay : CoroutineScope by MainScope(){
      * @param seek 是否产生seek动作,直播设置为false
      */
     fun onResume(seek: Boolean) {
+        markReadStart()
         if (videoManager.listener() != null) {
             videoManager.listener().onVideoResume(seek)
         }
@@ -521,6 +531,34 @@ object VideoPlay : CoroutineScope by MainScope(){
         sMediaPlayerListener?.onAutoCompletion()
         sMediaPlayerListener = null
         sSwitchVideo = null
+    }
+
+    fun markReadStart() {
+        readStartTime = System.currentTimeMillis()
+    }
+
+    fun upReadTime() {
+        val book = book ?: return
+        if (!inBookshelf || !AppConfig.enableReadRecord) {
+            markReadStart()
+            return
+        }
+        val now = System.currentTimeMillis()
+        val delta = now - readStartTime
+        readStartTime = now
+        if (delta <= 0L) return
+        if (readRecord.bookName != book.name || readRecord.deviceId != AppConst.androidId) {
+            readRecord.deviceId = AppConst.androidId
+            readRecord.bookName = book.name
+            readRecord.readTime = appDb.readRecordDao.getReadTime(AppConst.androidId, book.name) ?: 0L
+        }
+        readRecord.readTime += delta
+        readRecord.lastRead = now
+        val record = readRecord.copy()
+        globalExecutor.execute {
+            appDb.readRecordDao.insert(record)
+            ReadRecordDailyHelper.record(delta, now)
+        }
     }
 
     fun stopLoading() {
@@ -551,6 +589,11 @@ object VideoPlay : CoroutineScope by MainScope(){
             durChapterPos = b.durChapterPos
             source = appDb.bookSourceDao.getBookSource(b.origin)
             SourceCallBack.callBackBook(SourceCallBack.START_READ, source as BookSource?, b, chapter)
+            readRecord.deviceId = AppConst.androidId
+            readRecord.bookName = b.name
+            readRecord.readTime = appDb.readRecordDao.getReadTime(AppConst.androidId, b.name) ?: 0L
+            readRecord.lastRead = System.currentTimeMillis()
+            markReadStart()
         }
         upEpisodes()
         if (source == null) {
@@ -600,8 +643,10 @@ object VideoPlay : CoroutineScope by MainScope(){
             appCtx.toastOnUi("已播放完")
             return false
         }
+        upReadTime()
         chapterInVolumeIndex = index
         saveRead(0)
+        markReadStart()
         startPlay(player)
         postEvent(EventBus.UP_VIDEO_INFO, arrayListOf(1)) //更新选集视图
         return true

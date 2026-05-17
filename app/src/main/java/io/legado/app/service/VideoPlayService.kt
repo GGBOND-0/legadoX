@@ -327,6 +327,9 @@ class VideoPlayService : BaseService() {
      */
     private fun pause(fromCB: Boolean = false) {
         try {
+            if (!pause) {
+                VideoPlay.upReadTime()
+            }
             pause = true
             updateFloatingKeepScreenOn(false)
             upPlayProgressJob?.cancel()
@@ -346,6 +349,9 @@ class VideoPlayService : BaseService() {
     @SuppressLint("WakelockTimeout")
     private fun resume(fromCB: Boolean = false) {
         try {
+            if (pause) {
+                VideoPlay.markReadStart()
+            }
             pause = false
             updateFloatingKeepScreenOn(true)
             if (!fromCB) {
@@ -560,6 +566,7 @@ class VideoPlayService : BaseService() {
         }
         playerView.setVideoAllCallBack(object : GSYSampleCallBack() {
             override fun onPrepared(url: String?, vararg objects: Any?) {
+                VideoPlay.markReadStart()
                 updateFloatingKeepScreenOn(true)
                 upMediaMetadata()
                 upPlayProgress()
@@ -600,6 +607,9 @@ class VideoPlayService : BaseService() {
     }
 
     private fun stop() {
+        if (!pause) {
+            VideoPlay.upReadTime()
+        }
         stopSelf()
         pause = true
     }
@@ -628,6 +638,9 @@ class VideoPlayService : BaseService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (!pause) {
+            VideoPlay.upReadTime()
+        }
         VideoPlay.saveRead()
         try {
             if (::windowManager.isInitialized && floatingView.parent != null) {

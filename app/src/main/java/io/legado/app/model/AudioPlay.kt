@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import io.legado.app.R
+import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.IntentAction
@@ -111,8 +112,9 @@ object AudioPlay : CoroutineScope by MainScope() {
     fun resetData(book: Book) {
         stop()
         AudioPlay.book = book
+        readRecord.deviceId = AppConst.androidId
         readRecord.bookName = book.name
-        readRecord.readTime = appDb.readRecordDao.getReadTime(book.name) ?: 0
+        readRecord.readTime = appDb.readRecordDao.getReadTime(AppConst.androidId, book.name) ?: 0
         chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
         simulatedChapterSize = if (book.readSimulating()) {
             book.simulatedTotalChapterNum()

@@ -1,6 +1,7 @@
 package io.legado.app.model
 
 import io.legado.app.constant.AppLog
+import io.legado.app.constant.AppConst
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
@@ -73,8 +74,9 @@ object ReadManga : CoroutineScope by MainScope() {
 
     fun resetData(book: Book) {
         ReadManga.book = book
+        readRecord.deviceId = AppConst.androidId
         readRecord.bookName = book.name
-        readRecord.readTime = appDb.readRecordDao.getReadTime(book.name) ?: 0
+        readRecord.readTime = appDb.readRecordDao.getReadTime(AppConst.androidId, book.name) ?: 0
         chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
         simulatedChapterSize = if (book.readSimulating()) {
             book.simulatedTotalChapterNum()

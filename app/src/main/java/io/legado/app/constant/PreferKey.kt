@@ -124,6 +124,7 @@ object PreferKey {
     const val textFullJustify = "textFullJustify"
     const val textBottomJustify = "textBottomJustify"
     const val adaptSpecialStyle = "adaptSpecialStyle"
+    const val epubParseMode = "epubParseMode"
     const val autoReadSpeed = "autoReadSpeed"
     const val autoReadMode = "autoReadMode"
     const val barElevation = "barElevation"

@@ -1220,4 +1220,7 @@
     <string name="auto_check_new_backup_t">自动检查新备份</string>
     <string name="auto_check_new_backup_s">打开软件时检查是否有新备份，有新备份时提示是否更新</string>
     <string name="sys_image_picker">系统图片选择器</string>
+    <string name="epub_parse_mode">EPUB解析方式</string>
+    <string name="epub_parse_mode_new">新版</string>
+    <string name="epub_parse_mode_classic">經典</string>
 </resources>

@@ -424,11 +424,14 @@ object BookHelp {
                     file.delete()
                 }
             }
-            val needRefreshEpubContent = book.isEpub &&
-                AppConfig.adaptSpecialStyle &&
-                (!string.contains(EpubFile.NATIVE_CONTENT_FLAG) ||
-                    !string.contains(EpubFile.NATIVE_LAYOUT_FLAG) ||
-                    !string.contains(EpubFile.NATIVE_CONTENT_VERSION_FLAG))
+            val needRefreshEpubContent = book.isEpub && when (AppConfig.epubParseMode) {
+                AppConfig.EPUB_PARSE_MODE_CLASSIC ->
+                    !string.contains(EpubFile.NATIVE_CONTENT_FLAG) ||
+                        !string.contains(EpubFile.NATIVE_LAYOUT_FLAG) ||
+                        !string.contains(EpubFile.NATIVE_CONTENT_VERSION_FLAG)
+                else -> string.contains(EpubFile.NATIVE_CONTENT_FLAG) ||
+                    string.contains("<usehtml", ignoreCase = true)
+            }
             if (needRefreshEpubContent) {
                 val epubContent = LocalBook.getContent(book, bookChapter)
                 if (epubContent != null) {

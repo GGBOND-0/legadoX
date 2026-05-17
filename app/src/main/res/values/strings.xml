@@ -1659,6 +1659,9 @@
     <string name="epub_button_pressed">Button pressed</string>
     <string name="epub_media_not_supported">EPUB embedded media is recognized, but native reading page cannot play it yet</string>
     <string name="epub_footnote_load_failed">Failed to load note</string>
+    <string name="epub_parse_mode">EPUB parse mode</string>
+    <string name="epub_parse_mode_new">New</string>
+    <string name="epub_parse_mode_classic">Classic</string>
     <string name="ai_restore_thinking">Thinking…</string>
     <string name="read_record_date_pattern">MMM d, yyyy</string>
     <string name="read_record_month_pattern">MMM</string>

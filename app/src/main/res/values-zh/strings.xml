@@ -1767,4 +1767,7 @@
 
 用户选中或追问：
 %6$s</string>
+    <string name="epub_parse_mode">EPUB解析方式</string>
+    <string name="epub_parse_mode_new">新版</string>
+    <string name="epub_parse_mode_classic">经典</string>
 </resources>

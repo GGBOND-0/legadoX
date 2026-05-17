@@ -92,6 +92,14 @@
             android:summary="@string/pref_anti_alias_summary"
             android:title="@string/anti_alias" />
 
+        <io.legado.app.lib.prefs.NameListPreference
+            android:defaultValue="0"
+            android:entries="@array/epub_parse_mode_title"
+            android:entryValues="@array/epub_parse_mode_value"
+            android:key="epubParseMode"
+            android:title="@string/epub_parse_mode"
+            app:iconSpaceReserved="false" />
+
         <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="highBrush"

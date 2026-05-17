@@ -253,7 +253,8 @@ class TextChapterLayout(
         val imageStyle = book.getImageStyle()
         val isSingleImageStyle = imageStyle.equals(Book.imgStyleSingle, true)
 
-        if (!book.isEpub && (titleMode != 2 || bookChapter.isVolume || contents.isEmpty())) {
+        val useNovelChrome = !book.isEpub || AppConfig.epubParseMode != AppConfig.EPUB_PARSE_MODE_CLASSIC
+        if (useNovelChrome && (titleMode != 2 || bookChapter.isVolume || contents.isEmpty())) {
             var firstLine = true
             //标题非隐藏
             val advancedTitleHandled = titleMode == AdvancedTitleConfig.TITLE_MODE_ADVANCED &&
@@ -376,10 +377,6 @@ class TextChapterLayout(
                     val contentStart = text.indexOf('>')
                     val contentEnd = text.lastIndexOf("<")
                     if (contentStart >= 0 && contentEnd > contentStart) {
-                        if (book.isEpub) {
-                            setTypeEpubDiagnosticPage("旧 EPUB 缓存仍是 usehtml，请重新打开或刷新章节缓存", text.take(180))
-                            return@forEach
-                        }
                         setTypeHtml(imageStyle, book, text.substring(contentStart + 1, contentEnd))
                         return@forEach
                     }

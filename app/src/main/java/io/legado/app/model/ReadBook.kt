@@ -606,6 +606,9 @@ object ReadBook : CoroutineScope by MainScope() {
             append('|').append(ChapterProvider.titlePaintTextHeight)
             append('|').append(ChapterProvider.lineSpacingExtra)
             append('|').append(ChapterProvider.paragraphSpacing)
+            if (book?.isEpub == true) {
+                append("|epubParse=").append(AppConfig.epubParseMode)
+            }
         }
     }
 

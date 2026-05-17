@@ -82,6 +82,7 @@ class OtherConfigFragment : PreferenceFragment(),
         upPreferenceSummary(PreferKey.bitmapCacheSize, AppConfig.bitmapCacheSize.toString())
         upPreferenceSummary(PreferKey.imageRetainNum, AppConfig.imageRetainNum.toString())
         upPreferenceSummary(PreferKey.sourceEditMaxLine, AppConfig.sourceEditMaxLine.toString())
+        upPreferenceSummary(PreferKey.epubParseMode, AppConfig.epubParseMode.toString())
         onlyUpdateReadPref = findPreference<Preference>(PreferKey.onlyUpdateRead)?.also {
             it.isVisible = AppConfig.autoRefreshBook
         }
@@ -243,6 +244,10 @@ class OtherConfigFragment : PreferenceFragment(),
 
             PreferKey.sourceEditMaxLine -> {
                 upPreferenceSummary(key, AppConfig.sourceEditMaxLine.toString())
+            }
+
+            PreferKey.epubParseMode -> {
+                upPreferenceSummary(key, AppConfig.epubParseMode.toString())
             }
 
             PreferKey.autoRefresh -> {

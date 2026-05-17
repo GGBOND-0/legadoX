@@ -95,6 +95,9 @@ class PageView(context: Context) : FrameLayout(context) {
         get() {
             return binding.vwRoot.paddingStart
         }
+    private val isClassicEpub: Boolean
+        get() = ReadBook.book?.isEpub == true &&
+            AppConfig.epubParseMode == AppConfig.EPUB_PARSE_MODE_CLASSIC
 
     init {
         if (!isInEditMode) {
@@ -172,13 +175,13 @@ class PageView(context: Context) : FrameLayout(context) {
      */
     fun upStatusBar() = with(binding.vwStatusBar) {
 //        setPadding(paddingLeft, context.statusBarHeight, paddingRight, paddingBottom)
-        isGone = ReadBook.book?.isEpub == true ||
+        isGone = isClassicEpub ||
             ReadBookConfig.hideStatusBar ||
             readBookActivity?.isInMultiWindow == true
     }
 
     fun upNavigationBar() {
-        binding.vwNavigationBar.isGone = ReadBook.book?.isEpub == true || ReadBookConfig.hideNavigationBar
+        binding.vwNavigationBar.isGone = isClassicEpub || ReadBookConfig.hideNavigationBar
     }
 
     fun upPaddingDisplayCutouts() {
@@ -207,7 +210,7 @@ class PageView(context: Context) : FrameLayout(context) {
      * 更新阅读信息
      */
     private fun upTipStyle(textPage: TextPage? = currentTextPage) = binding.run {
-        val isEpub = ReadBook.book?.isEpub == true
+        val isEpub = isClassicEpub
         tvHeaderLeft.tag = null
         tvHeaderMiddle.tag = null
         tvHeaderRight.tag = null

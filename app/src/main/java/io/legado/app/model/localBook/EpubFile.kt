@@ -347,6 +347,17 @@ class EpubFile(var book: Book) {
             includeNextResource = includeNextChapterResource,
             isLastChapter = isLastChapter
         )
+        if (AppConfig.epubParseMode != AppConfig.EPUB_PARSE_MODE_CLASSIC) {
+            return getReadableChapterContent(
+                chapter = chapter,
+                chapterResources = chapterResources,
+                startFragmentId = startFragmentId,
+                endFragmentId = endFragmentId,
+                includeNextChapterResource = includeNextChapterResource,
+                nextChapterFirstResourceHref = nextChapterFirstResourceHref,
+                isLastChapter = isLastChapter
+            )
+        }
         chapterResources.forEachIndexed { index, res ->
             collectRawResource(res)
             // Native layout cache is keyed by href, so keep the cached DOM as the full resource.
@@ -392,6 +403,125 @@ class EpubFile(var book: Book) {
         return """<epub-native data-native-ver="2" data-href="$nativeHref" data-hrefs="$nativeHrefList" data-title="$title" />"""
     }
 
+    private fun getReadableChapterContent(
+        chapter: BookChapter,
+        chapterResources: List<Resource>,
+        startFragmentId: String?,
+        endFragmentId: String?,
+        includeNextChapterResource: Boolean,
+        nextChapterFirstResourceHref: String,
+        isLastChapter: Boolean
+    ): String {
+        val elements = Elements()
+        val rawResources = linkedMapOf<String, String>()
+        chapterResources.forEachIndexed { index, res ->
+            if (ENABLE_EPUB_DEBUG_DUMP) {
+                rawResources[res.href] = String(res.data, mCharset)
+            }
+            elements.add(
+                when {
+                    index == 0 && index == chapterResources.lastIndex ->
+                        getBody(res, startFragmentId, endFragmentId, buildNativeDom = false)
+                    index == 0 ->
+                        getBody(res, startFragmentId, null, buildNativeDom = false)
+                    index == chapterResources.lastIndex && includeNextChapterResource && !isLastChapter &&
+                        res.href == nextChapterFirstResourceHref -> getBody(res, null, endFragmentId, buildNativeDom = false)
+                    else -> getBody(res, null, null, buildNativeDom = false)
+                }
+            )
+        }
+        val text = elements.asSequence()
+            .flatMap { element -> element.readableLines().asSequence() }
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .joinToString("\n")
+        if (ENABLE_EPUB_DEBUG_DUMP) {
+            dumpEpubChapterDebug(chapter, rawResources, text)
+        }
+        return text
+    }
+
+    private fun Element.readableLines(): List<String> {
+        val lines = arrayListOf<String>()
+        fun appendText(builder: StringBuilder, value: String) {
+            val normalized = value.replace(Regex("\\s+"), " ")
+            if (normalized.isBlank()) return
+            if (builder.isNotEmpty() && !builder.endsWith(' ') && !normalized.startsWith(' ')) {
+                builder.append(' ')
+            }
+            builder.append(normalized)
+        }
+
+        fun walk(node: org.jsoup.nodes.Node, builder: StringBuilder) {
+            when (node) {
+                is org.jsoup.nodes.TextNode -> appendText(builder, node.text())
+                is Element -> {
+                    when (node.normalName()) {
+                        "title", "script", "style" -> return
+                        "br" -> {
+                            builder.toString().trim().takeIf { it.isNotBlank() }?.let { lines.add(it) }
+                            builder.setLength(0)
+                        }
+                        "img" -> {
+                            builder.toString().trim().takeIf { it.isNotBlank() }?.let { lines.add(it) }
+                            builder.setLength(0)
+                            val src = node.attr("src").trim()
+                            if (src.isNotBlank() && node.attr("data-epub-background") != "true") {
+                                lines.add("""<img src="$src">""")
+                            }
+                        }
+                        else -> {
+                            if (node.isReadableBlock() && builder.isNotBlank()) {
+                                lines.add(builder.toString().trim())
+                                builder.setLength(0)
+                            }
+                            node.childNodes().forEach { child -> walk(child, builder) }
+                            if (node.isReadableBlock()) {
+                                builder.toString().trim().takeIf { it.isNotBlank() }?.let { lines.add(it) }
+                                builder.setLength(0)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        cleanReadableEpubElement(this)
+        val builder = StringBuilder()
+        childNodes().forEach { child -> walk(child, builder) }
+        builder.toString().trim().takeIf { it.isNotBlank() }?.let { lines.add(it) }
+        return lines
+    }
+
+    private fun Element.isReadableBlock(): Boolean {
+        return normalName() in setOf(
+            "address", "article", "aside", "blockquote", "center", "dd", "dialog",
+            "div", "dl", "dt", "fieldset", "figcaption", "figure", "footer", "form",
+            "h1", "h2", "h3", "h4", "h5", "h6", "header", "hr", "li", "main", "nav",
+            "ol", "p", "pre", "section", "table", "tbody", "td", "tfoot", "th",
+            "thead", "tr", "ul"
+        )
+    }
+
+    private fun cleanReadableEpubElement(element: Element) {
+        element.select("title, script, style").remove()
+        element.select("[style*=display:none], [style*=display: none]").remove()
+        element.select("[data-epub-page-bg]").remove()
+        element.select("img[data-epub-background=true]").remove()
+        var coverSeen = false
+        element.select("img[src=\"cover.jpeg\"]").forEach { image ->
+            if (coverSeen) {
+                image.remove()
+            } else {
+                coverSeen = true
+            }
+        }
+        val tag = Book.rubyTag
+        if (book.getDelTag(tag)) {
+            element.select("rp, rt").remove()
+        }
+    }
+
     private fun collectChapterResources(
         contents: List<Resource>,
         currentHref: String,
@@ -428,7 +558,12 @@ class EpubFile(var book: Book) {
         return map
     }
 
-    private fun getBody(res: Resource, startFragmentId: String?, endFragmentId: String?): Element {
+    private fun getBody(
+        res: Resource,
+        startFragmentId: String?,
+        endFragmentId: String?,
+        buildNativeDom: Boolean = true
+    ): Element {
         /**
          * <image width="1038" height="670" xlink:href="..."/>
          * ...titlepage.xhtml
@@ -527,7 +662,9 @@ class EpubFile(var book: Book) {
                 it.attr("href", resolvedHref)
             }
         }
-        buildNativeDom(doc, bodyElement, res)
+        if (buildNativeDom) {
+            buildNativeDom(doc, bodyElement, res)
+        }
         return bodyElement
     }
 

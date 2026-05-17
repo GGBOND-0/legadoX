@@ -197,7 +197,9 @@ abstract class PageDelegate(protected val readView: ReadView) {
     }
 
     fun postInvalidate() {
-        if (ReadBook.book?.isEpub == true) return
+        if (ReadBook.book?.isEpub == true &&
+            AppConfig.epubParseMode == AppConfig.EPUB_PARSE_MODE_CLASSIC
+        ) return
         if (isStarted && isRunning && this is HorizontalPageDelegate) {
             readView.post {
                 if (isStarted && isRunning) {

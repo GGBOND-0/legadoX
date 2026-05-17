@@ -13,8 +13,10 @@ import android.util.Base64
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
@@ -91,6 +93,8 @@ import java.lang.ref.WeakReference
 import java.net.URLDecoder
 import java.util.Date
 import androidx.core.graphics.createBitmap
+import kotlin.math.abs
+import kotlin.math.min
 
 class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view), WebJsExtensions.Callback {
 
@@ -136,6 +140,16 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
     private var customWebViewCallback: WebChromeClient.CustomViewCallback? = null
     private var originOrientation: Int? = null
     private var needClearHistory = true
+    private var pullDownToDismiss = true
+    private var isPullDownDragging = false
+    private var isPullDownDismissing = false
+    private var pullDownStartX = 0f
+    private var pullDownStartY = 0f
+    private var pullDownDragStartY = 0f
+    private var pullDownLastDistance = 0f
+    private val touchSlop by lazy {
+        ViewConfiguration.get(requireContext()).scaledTouchSlop
+    }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -364,6 +378,103 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
                 currentWebView.setOnLongClickListener(null)
             }
         }
+
+        val pullDownToDismiss = config.pullDownToDismiss ?: if (first) true else null
+        pullDownToDismiss?.let {
+            setPullDownToDismiss(it)
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setPullDownToDismiss(enabled: Boolean) {
+        pullDownToDismiss = enabled
+        resetPullDownState()
+        currentWebView.setOnTouchListener(if (enabled) pullDownToDismissTouchListener else null)
+    }
+
+    private val pullDownToDismissTouchListener = View.OnTouchListener { _, event ->
+        val sheet = bottomSheet ?: return@OnTouchListener false
+        if (!pullDownToDismiss || isFullScreen || binding.customWebView.size > 0 || isPullDownDismissing) {
+            return@OnTouchListener false
+        }
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                sheet.animate().cancel()
+                pullDownStartX = event.rawX
+                pullDownStartY = event.rawY
+                pullDownLastDistance = 0f
+                isPullDownDragging = false
+                currentWebView.parent?.requestDisallowInterceptTouchEvent(true)
+                false
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                val distanceX = event.rawX - pullDownStartX
+                val distanceY = event.rawY - pullDownStartY
+                val isPullingDown = distanceY > touchSlop && distanceY > abs(distanceX)
+                if (!isPullDownDragging && isPullingDown && currentWebView.scrollY <= 0) {
+                    isPullDownDragging = true
+                    pullDownDragStartY = event.rawY
+                }
+                if (isPullDownDragging) {
+                    val pullDistance = (event.rawY - pullDownDragStartY).coerceAtLeast(0f)
+                    pullDownLastDistance = pullDistance
+                    sheet.translationY = pullDistance
+                    true
+                } else {
+                    false
+                }
+            }
+
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                currentWebView.parent?.requestDisallowInterceptTouchEvent(false)
+                if (isPullDownDragging) {
+                    finishPullDown(sheet)
+                    true
+                } else {
+                    resetPullDownState()
+                    false
+                }
+            }
+
+            else -> false
+        }
+    }
+
+    private fun finishPullDown(sheet: View) {
+        val dismissThreshold = min(
+            sheet.height * 0.25f,
+            TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 180f, displayMetrics)
+        )
+        isPullDownDragging = false
+        if (pullDownLastDistance >= dismissThreshold) {
+            isPullDownDismissing = true
+            sheet.animate()
+                .translationY(sheet.height.toFloat())
+                .setDuration(180L)
+                .withEndAction {
+                    if (isAdded) {
+                        dismissAllowingStateLoss()
+                    }
+                    isPullDownDismissing = false
+                }
+                .start()
+        } else {
+            sheet.animate()
+                .translationY(0f)
+                .setDuration(160L)
+                .withEndAction {
+                    resetPullDownState()
+                }
+                .start()
+        }
+    }
+
+    private fun resetPullDownState() {
+        isPullDownDragging = false
+        pullDownLastDistance = 0f
+        bottomSheet?.animate()?.cancel()
+        bottomSheet?.translationY = 0f
     }
 
     private fun setLongClickSaveImg() {
@@ -401,6 +512,7 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
         super.onViewCreated(view, savedInstanceState)
         view.setBackgroundColor(0)
         binding.webViewContainer.addView(currentWebView)
+        setPullDownToDismiss(true)
         lifecycleScope.launch(IO) {
             val args = arguments
             if (args == null) {
@@ -708,6 +820,7 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
         //阅读功能自定义配置
         var longClickSaveImg : Boolean? = null, //是否启用长按图片保存功能，默认启用
         var scrollNoDraggable : Boolean? = null, //网页有滚动时禁止对话框拖拽，默认启用
+        var pullDownToDismiss : Boolean? = null, //WebView滚动到顶部后下拉关闭弹窗，默认启用
     )
 
     inner class CustomWebChromeClient : WebChromeClient() {

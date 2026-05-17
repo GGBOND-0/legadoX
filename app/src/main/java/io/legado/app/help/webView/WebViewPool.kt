@@ -79,6 +79,7 @@ object WebViewPool {
             )
             stopLoading()
             clearFocus() //清除焦点
+            setOnTouchListener(null)
             setOnLongClickListener(null)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 setOnScrollChangeListener(null)

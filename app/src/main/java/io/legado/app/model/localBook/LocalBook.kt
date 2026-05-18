@@ -463,10 +463,7 @@ object LocalBook {
 
     fun deleteBook(book: Book, deleteOriginal: Boolean) {
         kotlin.runCatching {
-            BookHelp.clearCache(book)
-            if (!book.coverUrl.isNullOrEmpty()) {
-                FileUtils.delete(book.coverUrl!!)
-            }
+            clearBookShelfCache(book)
             if (deleteOriginal) {
                 if (book.bookUrl.isContentScheme()) {
                     val uri = book.bookUrl.toUri()
@@ -476,6 +473,33 @@ object LocalBook {
                 }
             }
         }
+    }
+
+    fun clearBookShelfCache(book: Book) {
+        kotlin.runCatching {
+            BookHelp.clearCache(book)
+            clearManagedCoverCache(book)
+            if (book.isEpub) {
+                EpubFile.clearCache(book)
+                clearCopiedEpubCache(book)
+            }
+            book.removeLocalUriCache()
+        }
+    }
+
+    private fun clearManagedCoverCache(book: Book) {
+        listOf("png", "jpg", "webp").forEach { extension ->
+            FileUtils.delete(getCoverPath(book.bookUrl, extension))
+        }
+    }
+
+    private fun clearCopiedEpubCache(book: Book) {
+        if (!book.bookUrl.isContentScheme()) return
+        val hasOtherSameEpub = appDb.bookDao.all.any {
+            it.bookUrl != book.bookUrl && it.isEpub && it.originName == book.originName
+        }
+        if (hasOtherSameEpub) return
+        FileUtils.delete(FileUtils.getPath(appCtx.externalFiles, "epub", book.originName))
     }
 
     /**

@@ -191,6 +191,24 @@ class EpubFile(var book: Book) {
                 preloadedNativeLayoutKeys.clear()
             }
         }
+
+        @Synchronized
+        fun clearCache(book: Book) {
+            if (eFile?.book?.bookUrl == book.bookUrl) {
+                eFile?.close()
+                eFile = null
+            }
+            val keyPrefix = "${book.bookUrl}|"
+            synchronized(globalNativeDomCache) {
+                globalNativeDomCache.keys.removeAll { it.startsWith(keyPrefix) }
+            }
+            synchronized(globalNativeLayoutCache) {
+                globalNativeLayoutCache.keys.removeAll { it.startsWith(keyPrefix) }
+            }
+            synchronized(preloadedNativeLayoutKeys) {
+                preloadedNativeLayoutKeys.removeAll { it.startsWith(keyPrefix) }
+            }
+        }
     }
 
     private var mCharset: Charset = Charset.defaultCharset()

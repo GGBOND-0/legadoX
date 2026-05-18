@@ -17,10 +17,12 @@ import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.getFolderNameNoCache
 import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isImage
+import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
+import io.legado.app.model.localBook.LocalBook
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.parcelize.IgnoredOnParcel
@@ -435,6 +437,9 @@ data class Book(
     fun delete() {
         if (ReadBook.book?.bookUrl == bookUrl) {
             ReadBook.book = null
+        }
+        if (isLocal) {
+            LocalBook.clearBookShelfCache(this)
         }
         appDb.bookDao.delete(this)
     }

@@ -116,7 +116,7 @@
     <string name="backup_confirmation">確認備份嗎？</string>
     <string name="backup_message">新備份會覆蓋原有備份。\n備份路徑YueDu</string>
     <string name="restore_confirmation">確認還原嗎？</string>
-    <string name="restore_message">還原成功會覆蓋原有書架。</string>
+    <string name="restore_message">還原成功會覆蓋原有書架</string>
     <string name="backup_success">備份成功</string>
     <string name="backup_fail">備份失敗\n%s</string>
     <string name="on_restore">正在還原</string>
@@ -273,7 +273,7 @@
     <string name="join_group">關注: %s</string>
     <string name="copy_complete">拷貝咗</string>
     <string name="bookshelf_management">書架管理</string>
-    <string name="clear_bookshelf_s">這將會刪除所有書籍，請謹慎操作。</string>
+    <string name="clear_bookshelf_s">這將會刪除所有書籍，請謹慎操作</string>
     <string name="search_book_source">搜索書源</string>
     <string name="search_rss_source">搜索訂閲源</string>
     <string name="search_book_source_num">搜索(共 %d 個書源)</string>
@@ -518,7 +518,7 @@
     <string name="indent_4">四字符縮進</string>
     <string name="select_folder">選擇文件夾</string>
     <string name="select_file">選擇文件</string>
-    <string name="no_find">沒有發現，可以在書源裏添加。</string>
+    <string name="no_find">沒有發現，可以在書源裏添加</string>
     <string name="restore_default">恢復默認</string>
     <string name="set_download_per">自定義緩存路徑需要存儲權限</string>
     <string name="black">黑色</string>
@@ -679,7 +679,7 @@
     <string name="btn_default_s">默認</string>
     <string name="main_menu">主菜單</string>
     <string name="request_permission">點擊授予權限</string>
-    <string name="tip_local_perm_request_storage">閲讀需要訪問存儲卡權限，請點擊下方的"授予權限"按鈕，或前往「設定」—「應用程式權限」—打開所需權限。如果授予權限後仍然不正常，請點擊右上角的「選擇文件夾」，使用系統文件夾選擇器。</string>
+    <string name="tip_local_perm_request_storage">閲讀需要訪問存儲卡權限，請點擊下方的"授予權限"按鈕，或前往「設定」—「應用程式權限」—打開所需權限。如果授予權限後仍然不正常，請點擊右上角的「選擇文件夾」，使用系統文件夾選擇器</string>
     <string name="alouding_disable">全文朗讀中不能朗讀選中文字</string>
     <string name="read_body_to_lh">擴展到劉海</string>
     <string name="toc_updateing">更新目錄中</string>

@@ -2,6 +2,7 @@ package io.legado.app.ui.config
 
 import android.app.ProgressDialog
 import android.content.Context
+import android.content.DialogInterface
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.InputType
@@ -96,14 +97,18 @@ class BackupConfigFragment : PreferenceFragment(),
     private val restoreDoc = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
             waitDialog.setText("恢复中…")
+            waitDialog.setCancelButton {
+                confirmStopTask {
+                    restoreJob?.cancel()
+                }
+            }
             waitDialog.show()
-            val task = Coroutine.async {
+            Coroutine.async {
+                restoreJob = coroutineContext[Job]
                 Restore.restore(appCtx, uri)
             }.onFinally {
                 waitDialog.dismiss()
-            }
-            waitDialog.setOnCancelListener {
-                task.cancel()
+                waitDialog.hideCancelButton()
             }
         }
     }
@@ -310,8 +315,7 @@ class BackupConfigFragment : PreferenceFragment(),
         ) {
             isIndeterminate = true
             max = PROGRESS_MAX
-            setCancelable(true)
-            setOnCancelListener {
+            setCancelConfirmButton {
                 backupJob?.cancel()
             }
         }
@@ -366,8 +370,10 @@ class BackupConfigFragment : PreferenceFragment(),
 
     fun restore() {
         waitDialog.setText(R.string.loading)
-        waitDialog.setOnCancelListener {
-            restoreJob?.cancel()
+        waitDialog.setCancelButton {
+            confirmStopTask {
+                restoreJob?.cancel()
+            }
         }
         waitDialog.show()
         Coroutine.async {
@@ -388,6 +394,7 @@ class BackupConfigFragment : PreferenceFragment(),
             }
         }.onFinally {
             waitDialog.dismiss()
+            waitDialog.hideCancelButton()
         }
     }
 
@@ -423,8 +430,7 @@ class BackupConfigFragment : PreferenceFragment(),
         ) {
             isIndeterminate = true
             max = PROGRESS_MAX
-            setCancelable(true)
-            setOnCancelListener {
+            setCancelConfirmButton {
                 restoreJob?.cancel()
             }
         }
@@ -496,6 +502,31 @@ class BackupConfigFragment : PreferenceFragment(),
     private fun ProgressDialog.showIndeterminateMessage(message: String) {
         isIndeterminate = true
         setMessage(message)
+    }
+
+    private fun ProgressDialog.setCancelConfirmButton(onConfirm: () -> Unit) {
+        setCancelable(false)
+        setCanceledOnTouchOutside(false)
+        setButton(DialogInterface.BUTTON_NEGATIVE, getString(android.R.string.cancel)) { _, _ -> }
+        setOnShowListener {
+            getButton(DialogInterface.BUTTON_NEGATIVE)?.setOnClickListener {
+                confirmStopTask(onConfirm)
+            }
+        }
+    }
+
+    private fun confirmStopTask(onConfirm: () -> Unit) {
+        if (context == null) {
+            return
+        }
+        alert {
+            setTitle(R.string.stop)
+            setMessage("确认停止？")
+            okButton {
+                onConfirm()
+            }
+            cancelButton()
+        }
     }
 
     private fun formatBytes(bytes: Long): String {

@@ -10,6 +10,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.PopupMenu
 import android.widget.LinearLayout
 import android.widget.PopupWindow
@@ -43,7 +44,7 @@ object ModernActionPopup {
         previousPopup?.dismiss()
         val popupSize = measurePopupSize(anchor, content)
         popup = PopupWindow(
-            content,
+            content.root,
             popupSize.first,
             popupSize.second,
             true
@@ -53,7 +54,8 @@ object ModernActionPopup {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 elevation = 0f
             }
-            showAnchored(anchor, content)
+            content.updateScrollIndicators()
+            showAnchored(anchor)
         }
         return popup
     }
@@ -82,7 +84,7 @@ object ModernActionPopup {
         context: Context,
         actions: List<Action>,
         dismiss: () -> Unit
-    ): ScrollView {
+    ): PopupContent {
         val textColor = ContextCompat.getColor(context, R.color.primaryText)
         val list = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -92,17 +94,10 @@ object ModernActionPopup {
                 addView(createItem(context, action, textColor, dismiss))
             }
         }
-        return ScrollView(context).apply {
+        val scrollView = ScrollView(context).apply {
             isFillViewport = false
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
-            background = UiCorner.opaqueRounded(
-                ContextCompat.getColor(context, R.color.background_card),
-                UiCorner.panelRadius(context)
-            )
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                clipToOutline = true
-            }
             addView(
                 list,
                 ViewGroup.LayoutParams(
@@ -111,6 +106,27 @@ object ModernActionPopup {
                 )
             )
         }
+        val root = FrameLayout(context).apply {
+            background = UiCorner.opaqueRounded(
+                ContextCompat.getColor(context, R.color.background_card),
+                UiCorner.panelRadius(context)
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                clipToOutline = true
+            }
+            addView(
+                scrollView,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+        }
+        val topIndicator = createScrollIndicator(context, "^", Gravity.TOP)
+        val bottomIndicator = createScrollIndicator(context, "v", Gravity.BOTTOM)
+        root.addView(topIndicator)
+        root.addView(bottomIndicator)
+        return PopupContent(root, scrollView, topIndicator, bottomIndicator)
     }
 
     private fun LinearLayout.createItem(
@@ -147,17 +163,45 @@ object ModernActionPopup {
         }
     }
 
-    private fun measurePopupSize(anchor: View, content: View): Pair<Int, Int> {
-        val gap = 8.dpToPx()
-        val visibleFrame = Rect()
-        anchor.rootView.getWindowVisibleDisplayFrame(visibleFrame)
-        content.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
-        val maxHeight = ((visibleFrame.height() - gap * 2) * 0.62f).toInt()
-            .coerceAtLeast(160.dpToPx())
-        return content.measuredWidth to content.measuredHeight.coerceAtMost(maxHeight)
+    private fun createScrollIndicator(
+        context: Context,
+        text: String,
+        gravity: Int
+    ): TextView {
+        return TextView(context).apply {
+            this.text = text
+            this.gravity = Gravity.CENTER
+            setTextColor(ContextCompat.getColor(context, R.color.primaryText))
+            textSize = 13f
+            includeFontPadding = false
+            alpha = 0.72f
+            background = ColorDrawable(ContextCompat.getColor(context, R.color.background_card))
+            isClickable = false
+            visibility = View.GONE
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                18.dpToPx(),
+                gravity
+            )
+        }
     }
 
-    private fun PopupWindow.showAnchored(anchor: View, content: View) {
+    private fun measurePopupSize(anchor: View, content: PopupContent): Pair<Int, Int> {
+        val gap = 8.dpToPx()
+        val location = IntArray(2)
+        val visibleFrame = Rect()
+        anchor.getLocationOnScreen(location)
+        anchor.rootView.getWindowVisibleDisplayFrame(visibleFrame)
+        content.scrollView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        val spaceAbove = location[1] - visibleFrame.top - gap * 2
+        val spaceBelow = visibleFrame.bottom - (location[1] + anchor.height) - gap * 2
+        val maxHeight = maxOf(spaceAbove, spaceBelow)
+            .coerceAtLeast(160.dpToPx())
+            .coerceAtMost(visibleFrame.height() - gap * 2)
+        return content.scrollView.measuredWidth to content.scrollView.measuredHeight.coerceAtMost(maxHeight)
+    }
+
+    private fun PopupWindow.showAnchored(anchor: View) {
         val gap = 4.dpToPx()
         val location = IntArray(2)
         val visibleFrame = Rect()
@@ -183,5 +227,30 @@ object ModernActionPopup {
             (visibleFrame.bottom - popupHeight - gap).coerceAtLeast(visibleFrame.top + gap)
         )
         showAtLocation(anchor.rootView, Gravity.NO_GRAVITY, x, y)
+    }
+
+    private class PopupContent(
+        val root: FrameLayout,
+        val scrollView: ScrollView,
+        private val topIndicator: View,
+        private val bottomIndicator: View
+    ) {
+
+        fun updateScrollIndicators() {
+            fun update() {
+                topIndicator.visibility = if (scrollView.canScrollVertically(-1)) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+                bottomIndicator.visibility = if (scrollView.canScrollVertically(1)) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+            }
+            scrollView.viewTreeObserver.addOnScrollChangedListener { update() }
+            scrollView.post { update() }
+        }
     }
 }

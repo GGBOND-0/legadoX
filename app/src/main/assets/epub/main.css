@@ -202,19 +202,16 @@ h2.head {
     font-family: "小标宋";
     text-align: left;
     font-weight: bold;
-    font-size: 1.1em;
+    font-size: 1.4em;
     margin: 1em 2em 2em 0;
-    color: #3f83e8;
+   color: #000000;
     line-height: 140%;
 }
 
 h2.head span {
     font-family: "仿宋";
-    font-size: 0.7em;
-    background-color: #3f83e8;
-    border-radius: 9px;
-    padding: 4px;
-    color: #fff;
+    font-size: 1.4em;
+    color: #000000;
 }
 
 
